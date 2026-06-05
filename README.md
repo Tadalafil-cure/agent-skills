@@ -1,6 +1,6 @@
 # Agent Skills
 
-A curated collection of installable skill protocols for AI agents — self-contained patches that extend agent capabilities without new dependencies. Drop in, reload, run.
+A curated collection of installable skill protocols for AI agents — self-contained patches that extend agent capabilities. Drop in, reload, run.
 
 ## Skills
 
