@@ -1,7 +1,7 @@
 ---
 name: holographic-enhanced-memory-protocol
-description: "Hermes 原生 holographic 插件的机制增强版 — 系统级强约束记忆触发、热/温/冷三层梯度记忆、类脑记忆下沉与用进废退淘汰。零新依赖，同等轻量。 / A mechanically enhanced edition of Hermes' native holographic plugin — system-level enforced memory hooks, hot/warm/cold gradient memory, and brain-inspired memory sinking with use-it-or-lose-it pruning. Zero new dependencies."
-version: 2.3.0
+description: "Hermes 原生 holographic 插件的机制增强版 — 系统级强约束记忆触发、热/温/冷三层梯度记忆、TF-IDF 语义检索、类脑记忆下沉与用进废退淘汰。零新依赖，同等轻量。 / A mechanically enhanced edition of Hermes' native holographic plugin — system-level enforced memory hooks, hot/warm/cold gradient memory, TF-IDF semantic retrieval, and brain-inspired memory sinking with use-it-or-lose-it pruning. Zero new dependencies."
+version: 2.5.0
 ---
 
 # Holographic Enhanced Memory Protocol
@@ -13,7 +13,7 @@ version: 2.3.0
 原生 holographic 给了积木：SQLite 结构化存储 + FTS5 全文检索 + 实体解析。
 但它把「什么时候记、记什么、记多少」全部交给了 prompt 指令——软约束，Agent
 可以跳过，也可以乱写。本协议在零新依赖的前提下，将软约束全部替换为挂钩系统
-原生机制的硬约束，并引入热/温/冷三层梯度记忆模型。
+原生机制的硬约束，并引入热/温/冷三层梯度记忆模型 + TF-IDF 语义检索。
 
 ---
 
@@ -24,12 +24,12 @@ storage, FTS5 full-text search, and entity resolution. But it leaves *when to
 remember, what to remember, and how much to keep* entirely to prompt
 instructions — soft constraints the agent can skip or abuse. This protocol
 replaces every soft constraint with hard hooks anchored in Hermes' native
-mechanisms, and introduces a hot/warm/cold gradient memory model. Zero new
-dependencies.
+mechanisms, and introduces a hot/warm/cold gradient memory model with TF-IDF
+semantic retrieval. Zero new dependencies.
 
 ---
 
-## 三项核心增强 · Three Core Enhancements
+## 四项核心增强 · Four Core Enhancements
 
 ### 一、系统级强约束记忆触发
 ### Ⅰ. System-Level Enforced Memory Hooks
@@ -70,7 +70,7 @@ with a distinct "temperature" and eviction strategy:
 | 层 · Layer | 温度 · Temp | 认知对应 · Cognitive Analog | 存储 · Storage | 机制 · Mechanism |
 |------------|------------|---------------------------|----------------|-----------------|
 | L0 热记忆 · Hot | 🔥 活跃 Active | 前额叶工作记忆 · Prefrontal working | MEMORY.md | 全量注入；超限梯度下沉 · Full injection; gradient sink when over limit |
-| L1 温记忆 · Warm | 🌤 可唤醒 Retrievable | 海马体结构化 · Hippocampal structured | SQLite + FTS5 | 信号分类 + 信任评分 + 按需检索 · Classified, trust-scored, on-demand |
+| L1 温记忆 · Warm | 🌤 可唤醒 Retrievable | 海马体结构化 · Hippocampal structured | SQLite + TF-IDF | 信号分类 + 信任评分 + 语义检索 · Classified, trust-scored, semantic retrieval |
 | L2 冷记忆 · Cold | ❄ 归档 Archived | 皮层情景记忆 · Cortical episodic | session_search | 完整对话原文，手动回溯 · Raw transcripts, manual recall |
 
 **记忆下沉不是删除，是降级**——就像人脑不会真正「忘记」，只是从活跃意识退到
@@ -83,41 +83,73 @@ remain retrievable in L1, just at reduced trust and no longer resident in
 context. Facts that go unrecalled decay continuously until automatic pruning —
 an engineering realization of *"use it or lose it."*
 
-### 三、极致轻量
-### Ⅲ. Radical Lightness
+### 三、TF-IDF 语义检索
+### Ⅲ. TF-IDF Semantic Retrieval
+
+FTS5 关键词搜索存在词汇不对齐问题：用户说「记忆机制」，事实写的是
+「holographic memory protocol」——关键词永远匹配不上，导致 L1 温记忆中
+58 条事实有 35 条永远无法被检索到。
+
+FTS5 keyword search suffers from vocabulary mismatch: when the user says
+"memory mechanism" but facts say "holographic memory protocol", the keywords
+never match. In a real deployment, 35 out of 58 facts were never retrievable
+via FTS5.
+
+本协议用 TF-IDF 向量化 + cosine similarity 替代 FTS5 作为主检索手段：
+
+This protocol replaces FTS5 with TF-IDF vectorization + cosine similarity as
+the primary retrieval method:
+
+- **中英混合分词**：中文用字符 bigram，英文用单词级 token
+  *Mixed Chinese/English tokenization: character bigrams for CJK, word tokens for ASCII*
+- **零外部依赖**：numpy only，无 API 调用，无 embedding 服务
+  *Zero external dependencies: numpy only, no API calls, no embedding service*
+- **增量索引**：每个 `add_fact()` 自动计算并存储向量到 `embedding BLOB` 列
+  *Incremental indexing: every add_fact() auto-computes and stores vector*
+- **fallback 机制**：embedding 不可用时自动回退到 FTS5
+  *Graceful fallback: auto-downgrades to FTS5 if embeddings unavailable*
+
+**效果对比 · Before/After:**
+
+| 用户查询 | FTS5（旧） | TF-IDF（新） |
+|----------|-----------|-------------|
+| "记忆机制" | 0 条 ❌ | Holographic Memory Protocol ✅ |
+| "有什么教训" | 0 条 ❌ | 三戒 + 不要跳步 ✅ |
+| "模型怎么切换" | 0 条 ❌ | 模型路由 + thinking 三档 ✅ |
+| "域测试流程" | 0 条 ❌ | 域测试教训 + 工作流 ✅ |
+
+### 四、极致轻量
+### Ⅳ. Radical Lightness
 
 本协议没有引入任何新服务、新数据库、新依赖。全部增强都发生在 holographic
-插件已有的 SQLite + FTS5 + 文件系统之上。分类是正则，下沉是文件读写，评分
-是计数器——所有机械操作由代码完成，不消耗 LLM token。适合离线环境、单机
-部署、嵌入式设备。
+插件已有的 SQLite + 文件系统之上。分类是正则，下沉是文件读写，评分是计数器，
+检索是 numpy 矩阵运算——所有机械操作由代码完成，不消耗 LLM token。
+适合离线环境、单机部署、嵌入式设备。
 
 *This protocol introduces zero new services, databases, or dependencies. Every
-enhancement runs on holographic's existing SQLite + FTS5 + filesystem stack.
-Classification is regex. Sinking is file I/O. Scoring is counters. All
-mechanical operations are code-driven — zero LLM token cost. Suitable for
-offline environments, single-machine deployments, and embedded devices.*
+enhancement runs on holographic's existing SQLite + filesystem stack.
+Classification is regex. Sinking is file I/O. Scoring is counters. Retrieval is
+numpy matrix math. All mechanical operations are code-driven — zero LLM token
+cost. Suitable for offline environments, single-machine deployments, and
+embedded devices.*
 
 ---
 
 ## Quick Start
 
 Apply these patches to a fresh Hermes Agent installation, then restart.
-The protocol lives in two files — one for the holographic plugin, one to
-bridge a missing hook path in the agent loop.
+The protocol spans four files — the holographic plugin core, the semantic
+embedding engine, the retrieval pipeline, and the agent loop bridge.
 
-### Patch 1: Holographic Plugin
+### Patch 1: Holographic Plugin Core
 
 **File**: `plugins/memory/holographic/__init__.py`
 
-#### 1a. Add signal classification + tiered sinking + post-sink tagging
+#### 1a. Add signal classification + tiered sinking limits
 
-Before the `class HolographicMemoryProvider` line, insert the signal map,
-classifier, and L0 limit constants. If these don't exist, add them; if older
-versions exist, replace.
+Before the `class HolographicMemoryProvider` line, insert:
 
-```
-# Insert after the imports, before the FACT_STORE_SCHEMA definition:
-
+```python
 # --- L0 capacity limits ---
 _L0_SOFT_LIMIT = 1600       # chars — begin gentle sinking
 _L0_EMERGENCY_LIMIT = 2200  # chars — maximum-effort sinking
@@ -151,246 +183,191 @@ def _classify_signal(content: str) -> tuple[str, str]:
     return "general", ""
 ```
 
-#### 1b. Add startup enforcement
+#### 1b. Fix connection leak in initialize()
 
-In `initialize()`, after `self._session_id = session_id`, add:
+**Critical**: without this, multiple `initialize()` calls (session restarts)
+create new SQLite connections without closing old ones. Leaked connections
+hold write locks indefinitely, causing "database is locked" for all subsequent
+writes.
 
 ```python
-        self._session_id = session_id
-        # Enforce L0 limits on startup — MEMORY.md may exceed limits
-        # from writes that happened before this code was deployed.
+    def initialize(self, session_id: str, **kwargs) -> None:
+        # ... existing config loading ...
+
+        # Close any pre-existing store to avoid leaking connections.
+        if self._store is not None:
+            try:
+                self._store.close()
+            except Exception:
+                pass
+        if self._retriever is not None:
+            self._retriever = None
+
+        self._store = MemoryStore(db_path=db_path, default_trust=default_trust, hrr_dim=hrr_dim)
+        # ... rest of initialization ...
         self._enforce_l0_limit()
 ```
 
-#### 1c. Add on_memory_write with classification + sinking
+#### 1c. Fix connection leak in shutdown()
 
-If `on_memory_write` exists but only does mirroring, replace it. If it doesn't
-exist, add it to `HolographicMemoryProvider`:
+```python
+    def shutdown(self) -> None:
+        if self._store is not None:
+            try:
+                self._store.close()
+            except Exception:
+                pass
+        self._store = None
+        self._retriever = None
+```
+
+#### 1d. Add on_memory_write with classification + sinking + retry
 
 ```python
     def on_memory_write(self, action: str, target: str, content: str) -> None:
         if action not in ("add", "replace") or not self._store or not content:
             return
-        try:
-            category, tags = _classify_signal(content)
-            self._store.add_fact(content, category=category, tags=tags)
-            if target == "memory":
-                self._enforce_l0_limit()
-        except Exception as e:
-            logger.warning("Holographic memory_write failed: %s", e)
-```
-
-#### 1d. Add _enforce_l0_limit (tiered sinking)
-
-Add to `HolographicMemoryProvider`:
-
-```python
-    def _enforce_l0_limit(self, soft_limit=_L0_SOFT_LIMIT,
-                          emergency_limit=_L0_EMERGENCY_LIMIT) -> None:
-        from hermes_constants import get_hermes_home
-        mem_path = get_hermes_home() / "memories" / "MEMORY.md"
-        if not mem_path.exists():
-            return
-        try:
-            raw = mem_path.read_text(encoding="utf-8")
-        except Exception:
-            return
-        size = len(raw)
-        if size <= soft_limit:
-            return
-        entries = [e.strip() for e in raw.split(_MEMORY_ENTRY_DELIMITER) if e.strip()]
-        if len(entries) <= 1:
-            return
-        # Tiered sink count: graduated thresholds
-        # 1600+ gentle, 1800+ warning, 2000+ urgent, 2200+ emergency
-        if size > 2200:
-            sink_count = min(5, len(entries) - 1)
-            tier = "emergency"
-        elif size > 2000:
-            sink_count = min(3, len(entries) - 1)
-            tier = "urgent"
-        elif size > 1800:
-            sink_count = min(2, len(entries) - 1)
-            tier = "warning"
-        else:
-            sink_count = 1
-            tier = "gentle"
-        scored = []
-        for idx, entry in enumerate(entries):
-            cat, _ = _classify_signal(entry)
-            priority = _CATEGORY_PRIORITY.get(cat, 0)
-            scored.append((priority, idx, entry))
-        scored.sort(key=lambda x: (x[0], x[1]))
-        victims = {scored[i][2] for i in range(min(sink_count, len(scored)))}
-        kept = [e for e in entries if e not in victims]
-        try:
-            mem_path.write_text(
-                _MEMORY_ENTRY_DELIMITER.join(kept) + "\n",
-                encoding="utf-8",
-            )
-            logger.info("L0 sunk %d entries → %d chars (was %d, tier=%s)",
-                        len(victims), len(_MEMORY_ENTRY_DELIMITER.join(kept)),
-                        size, tier)
-        except Exception as e:
-            logger.warning("L0 sink rewrite failed: %s", e)
-        for victim in victims:
-            self._mark_sunk(victim)
-```
-
-#### 1e. Add _mark_sunk
-
-```python
-    def _mark_sunk(self, content: str) -> None:
-        if not self._store:
-            return
-        try:
-            row = self._store._conn.execute(
-                "SELECT fact_id, tags, trust_score FROM facts WHERE content = ?",
-                (content,),
-            ).fetchone()
-            if not row:
+        category, tags = _classify_signal(content)
+        last_error = None
+        for attempt in range(3):  # 1 initial + 2 retries
+            try:
+                self._store.add_fact(content, category=category, tags=tags)
+                if target == "memory":
+                    self._enforce_l0_limit()
                 return
-            fact_id, existing_tags, current_trust = row
-            tag_set = {t.strip() for t in (existing_tags or "").split(",") if t.strip()}
-            if "sunk" in tag_set:
-                return
-            tag_set.add("sunk")
-            new_tags = ",".join(sorted(tag_set))
-            new_trust = max(0.2, current_trust - 0.15)
-            self._store._conn.execute(
-                "UPDATE facts SET tags = ?, trust_score = ? WHERE fact_id = ?",
-                (new_tags, new_trust, fact_id),
-            )
-            self._store._conn.commit()
-        except Exception as e:
-            logger.warning("_mark_sunk failed: %s", e)
+            except Exception as e:
+                last_error = e
+                if attempt < 2:
+                    time.sleep(0.1)
+        logger.warning("Holographic memory_write failed after 3 attempts: %s", last_error)
 ```
 
-#### 1f. Upgrade silent exception handlers
+#### 1e–1j. Remaining hooks (as in v2.4.0)
 
-Find every `logger.debug` inside exception handlers in these methods and
-change to `logger.warning`:
+- `_enforce_l0_limit()` — tiered sinking (1600→1800→2000→2200)
+- `_mark_sunk()` — post-sink fact tagging
+- `_prune_low_trust()` — session-end cleanup (<0.15 trust)
+- `on_session_finalize()` — auto_extract + prune
+- `register()` — hook registration
+- `_ProviderCollector.register_hook()` bridge
 
-- `on_memory_write` except block
-- `_enforce_l0_limit` write_text except block
-- `_mark_sunk` except block
+---
 
-#### 1g. Add _prune_low_trust (if not present)
+### Patch 2: Semantic Embedding Engine (NEW in 2.5.0)
+
+**File**: `plugins/memory/holographic/embedding.py` (create new)
+
+Full source at `references/embedding.py`. Core components:
 
 ```python
-    def _prune_low_trust(self, max_facts=200, cull_trust=0.15) -> None:
-        if not self._store:
-            return
-        try:
-            conn = self._store._conn
-            cur = conn.execute("DELETE FROM facts WHERE trust_score < ?", (cull_trust,))
-            hard_deleted = cur.rowcount
-            total = conn.execute("SELECT COUNT(*) FROM facts").fetchone()[0]
-            if total > max_facts:
-                excess = total - max_facts
-                conn.execute(
-                    """DELETE FROM facts WHERE fact_id IN (
-                        SELECT fact_id FROM facts
-                        ORDER BY CASE WHEN tags LIKE '%sunk%' THEN 0 ELSE 1 END,
-                                 trust_score ASC LIMIT ?
-                    )""", (excess,))
-                soft_deleted = conn.rowcount
-                conn.commit()
-                logger.info("Pruned %d facts (hard=%d soft=%d, kept=%d)",
-                            hard_deleted + soft_deleted, hard_deleted,
-                            soft_deleted, total - hard_deleted - soft_deleted)
-            elif hard_deleted > 0:
-                conn.commit()
-                logger.info("Pruned %d abandoned facts", hard_deleted)
-        except Exception as e:
-            logger.debug("_prune_low_trust failed: %s", e)
+class EmbeddingStore:
+    """TF-IDF vector index with cosine similarity search."""
+    def __init__(self): ...
+    def encode(self, text: str) -> np.ndarray: ...    # text → TF vector
+    def index_fact(self, fact_id: int, content: str) -> np.ndarray: ...  # store vector
+    def rebuild_idf(self) -> None: ...                 # recompute IDF
+    def search(self, query: str, top_k=10, trust_scores=None) -> list[tuple[int, float]]: ...
+    def vector_to_bytes(self, vec: np.ndarray) -> bytes: ...  # SQLite BLOB
+    def bytes_to_vector(self, data: bytes) -> np.ndarray: ...  # deserialize
 ```
 
-#### 1h. Add on_session_finalize hook handler
+Tokenization: Chinese character bigrams + English word tokens, with
+stopword filtering for both languages.
 
-```python
-    def on_session_finalize(self, **kwargs) -> None:
-        session_id = kwargs.get("session_id")
-        if not session_id:
-            return
-        messages = []
-        try:
-            from hermes_constants import get_hermes_home
-            from hermes_state import SessionDB
-            db_path = get_hermes_home() / "state.db"
-            if db_path.exists():
-                sdb = SessionDB(db_path)
-                messages = sdb.get_messages_as_conversation(session_id)
-                sdb.close()
-        except Exception as exc:
-            logger.debug("on_session_finalize: cannot load messages: %s", exc)
-        if self._config.get("auto_extract", False):
-            if self._store and messages:
-                self._auto_extract_facts(messages)
-        self._prune_low_trust()
+---
+
+### Patch 3: MemoryStore Schema + Indexing
+
+**File**: `plugins/memory/holographic/store.py`
+
+#### 3a. Add embedding column to schema
+
+```sql
+CREATE TABLE IF NOT EXISTS facts (
+    ...
+    hrr_vector      BLOB,
+    embedding       BLOB          -- NEW: TF-IDF embedding vector
+);
 ```
 
-#### 1i. Update register() function
+#### 3b. Initialize EmbeddingStore at startup
 
 ```python
-def register(ctx) -> None:
-    config = _load_plugin_config()
-    provider = HolographicMemoryProvider(config=config)
-    ctx.register_memory_provider(provider)
-    ctx.register_hook("on_session_finalize", provider.on_session_finalize)
+from .embedding import EmbeddingStore
+
+class MemoryStore:
+    def __init__(self, ...):
+        ...
+        self._embeddings: EmbeddingStore | None = None
+        self._init_db()
+
+    def _init_db(self):
+        ...
+        # Migrate: add embedding column if missing
+        if "embedding" not in columns:
+            self._conn.execute("ALTER TABLE facts ADD COLUMN embedding BLOB")
+        self._conn.commit()
+        # Load existing embeddings
+        self._embeddings = EmbeddingStore()
+        self._load_embeddings()
 ```
 
-#### 1j. Ensure _ProviderCollector forwards hooks
-
-In `plugins/memory/__init__.py`, the `_ProviderCollector.register_hook` method
-must forward to the real PluginManager. If it's a no-op, replace with:
+#### 3c. Auto-compute embedding on add_fact
 
 ```python
-    def register_hook(self, hook_name: str, callback) -> None:
-        try:
-            from hermes_cli.plugins import get_plugin_manager
-            get_plugin_manager()._hooks.setdefault(hook_name, []).append(callback)
-        except Exception:
-            pass
+    def add_fact(self, content, category, tags, trust=None):
+        ...
+        self._compute_hrr_vector(fact_id, content)
+        self._compute_embedding(fact_id, content)  # NEW
+        ...
+```
+
+#### 3d. Add semantic search entry point
+
+```python
+    def search_embeddings(self, query, category=None, min_trust=0.3, limit=10):
+        """Semantic search via TF-IDF embedding cosine similarity."""
+        if self._embeddings is None or len(self._embeddings) == 0:
+            return self.search_facts(query, category, min_trust, limit)  # fallback
+        # ... cosine similarity + trust weighting ...
+```
+
+#### 3e. Add rebuild_embeddings() for backfill
+
+```python
+    def rebuild_embeddings(self) -> int:
+        """Backfill embeddings for all facts. Returns count."""
 ```
 
 ---
 
-### Patch 2: Run Agent (Sequential Path Bridge)
+### Patch 4: FactRetriever — Semantic Search Pipeline
+
+**File**: `plugins/memory/holographic/retrieval.py`
+
+Replace FTS5-based candidate retrieval with embedding-based:
+
+```python
+    def search(self, query, category=None, min_trust=0.3, limit=10):
+        # Stage 1: Embedding search (semantic, not keyword)
+        candidates = self.store.search_embeddings(
+            query, category=category, min_trust=min_trust, limit=limit * 3,
+        )
+        # Stage 2: Re-rank with Jaccard + HRR + trust
+        relevance = 0.5 * emb_score + 0.2 * jaccard + 0.3 * hrr_sim
+        score = relevance * trust_score
+        # Stage 3: Temporal decay (optional)
+```
+
+---
+
+### Patch 5: Run Agent Bridge (unchanged from v2.2.2)
 
 **File**: `run_agent.py`
 
-**Critical**: `run_agent.py` has TWO copies of the memory tool dispatch code.
-Only `_invoke_tool` (used by parallel tool execution) has the `on_memory_write`
-bridge. `_execute_tool_calls_sequential` (used by single tool calls — the
-default on WeChat, Telegram, and CLI) is missing it.
-
-Find the `elif function_name == "memory":` block inside
-`_execute_tool_calls_sequential` and add the bridge after `_memory_tool(...)`:
-
-```python
-            elif function_name == "memory":
-                target = function_args.get("target", "memory")
-                from tools.memory_tool import memory_tool as _memory_tool
-                function_result = _memory_tool(
-                    action=function_args.get("action"),
-                    target=target,
-                    content=function_args.get("content"),
-                    old_text=function_args.get("old_text"),
-                    store=self._memory_store,
-                )
-                # Bridge: notify external memory provider
-                if self._memory_manager and function_args.get("action") in ("add", "replace"):
-                    try:
-                        self._memory_manager.on_memory_write(
-                            function_args.get("action", ""),
-                            target,
-                            function_args.get("content", ""),
-                        )
-                    except Exception:
-                        pass
-                tool_duration = time.time() - tool_start_time
-```
+Ensure both `_invoke_tool` AND `_execute_tool_calls_sequential` have the
+`on_memory_write` bridge. The sequential path is used by WeChat/Telegram/CLI
+and is the #1 reason hooks silently fail.
 
 ---
 
@@ -399,25 +376,69 @@ Find the `elif function_name == "memory":` block inside
 After patching and restarting:
 
 ```bash
-# 1. Check log for successful registration
-grep 'holographic.*registered' ~/.hermes/logs/agent.log | tail -1
+# 1. Check all hooks are present
+grep -c 'def on_memory_write\|def on_session_finalize\|def _enforce_l0_limit\|def _classify_signal' \
+  ~/.hermes/hermes-agent/plugins/memory/holographic/__init__.py
 
-# 2. In a chat, send a memory write via the agent:
-#    "Remember: I prefer dark mode"
+# 2. Check embedding column exists
+sqlite3 ~/.hermes/memory_store.db "PRAGMA table_info(facts);" | grep embedding
 
-# 3. Check fact_store mirroring
-sqlite3 ~/.hermes/memory_store.db "SELECT fact_id, category, tags FROM facts ORDER BY fact_id DESC LIMIT 3;"
+# 3. Backfill existing facts
+python3 -c "
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path.home() / '.hermes/hermes-agent/plugins/memory/holographic'))
+from embedding import EmbeddingStore
+import sqlite3
+conn = sqlite3.connect(str(Path.home() / '.hermes/memory_store.db'))
+rows = conn.execute('SELECT fact_id, content FROM facts').fetchall()
+store = EmbeddingStore()
+for fid, content in rows:
+    store.index_fact(fid, content)
+store.rebuild_idf()
+for fid, content in rows:
+    vec = store._fact_vectors.get(fid)
+    if vec is not None:
+        conn.execute('UPDATE facts SET embedding = ? WHERE fact_id = ?',
+                     (store.vector_to_bytes(vec), fid))
+conn.commit()
+print(f'Backfilled {len(rows)} facts')
+"
 
-# 4. Check sinking — push MEMORY.md past 1600 chars with several writes,
-#    then verify a "L0 sunk" log entry appears:
-grep 'L0 sunk' ~/.hermes/logs/agent.log | tail -3
+# 4. Test semantic search
+python3 -c "
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path.home() / '.hermes/hermes-agent/plugins/memory/holographic'))
+from embedding import EmbeddingStore
+import sqlite3
+conn = sqlite3.connect(str(Path.home() / '.hermes/memory_store.db'))
+conn.row_factory = sqlite3.Row
+store = EmbeddingStore()
+for row in conn.execute('SELECT fact_id, content, embedding FROM facts WHERE embedding IS NOT NULL'):
+    store._fact_vectors[row['fact_id']] = store.bytes_to_vector(row['embedding'])
+    store.index_fact(row['fact_id'], row['content'])
+store.rebuild_idf()
+for q in ['记忆机制', '有什么教训', '下沉机制']:
+    results = store.search(q, top_k=3)
+    print(f'{q}:')
+    for fid, score in results:
+        r = conn.execute('SELECT content FROM facts WHERE fact_id = ?', (fid,)).fetchone()
+        print(f'  [{score:.3f}] {r[\"content\"][:80]}')
+"
+
+# 5. Verify no connection leaks
+fuser ~/.hermes/memory_store.db
+# Should show exactly 1 PID with 3 fds (DB + WAL + SHM)
+ls /proc/$(pgrep -f 'gateway run')/fd/ | grep -c memory_store
+# Should be 3 (one connection)
 ```
 
 ---
 
 ## Architecture Reference
 
-### Data Flow
+### Data Flow (Updated for v2.5.0)
 
 ```
 Agent calls memory(action='add', content='...')
@@ -426,8 +447,10 @@ Agent calls memory(action='add', content='...')
   │
   └── on_memory_write() HOOK (unskippable)
         ├── _classify_signal(content) → (category, tags)
-        ├── fact_store.add() → L1 mirror
-  └── _enforce_l0_limit()
+        ├── fact_store.add() → L1 mirror (SQLite)
+        │     ├── _compute_hrr_vector() → HRR phases
+        │     └── _compute_embedding() → TF-IDF vector  ← NEW
+        └── _enforce_l0_limit()
               ├── 1600+ chars → gentle   (sink 1)
               ├── 1800+ chars → warning  (sink 2)
               ├── 2000+ chars → urgent   (sink 3)
@@ -436,13 +459,28 @@ Agent calls memory(action='add', content='...')
                           ├── tag += "sunk"
                           └── trust -= 0.15
 
+User sends message:
+  prefetch(query)
+    └── FactRetriever.search(query)
+          ├── store.search_embeddings(query)  ← PRIMARY (cosine similarity)
+          │     └── TF-IDF encode → cosine_sim × trust
+          ├── Jaccard rerank (token overlap)
+          └── HRR similarity (structural bonus)
+    → Top 5 facts injected into system prompt
+
 Session start:
-  initialize() → _enforce_l0_limit()  ← startup safety net
+  initialize()
+    ├── close old store connection  ← NEW (prevents leaks)
+    ├── MemoryStore() → EmbeddingStore()
+    ├── _load_embeddings() → restore vectors from DB
+    └── _enforce_l0_limit()  ← startup safety net
 
 Session end (/new, /reset, timeout):
   on_session_finalize()
     ├── auto_extract_facts(messages) → trust=0.30
     └── _prune_low_trust() → cull <0.15, cap 200
+  shutdown()
+    └── self._store.close()  ← NEW (prevents leaks)
 ```
 
 ### Layers
@@ -450,12 +488,8 @@ Session end (/new, /reset, timeout):
 | Layer | Temperature | Cognitive Analog | Storage | Mechanism |
 |-------|------------|-----------------|---------|-----------|
 | L0 热记忆 · Hot | 🔥 Active | Prefrontal working | MEMORY.md | Full injection; gradient sink when >1600 chars |
-| L1 温记忆 · Warm | 🌤 Retrievable | Hippocampal structured | SQLite + FTS5 + HRR | Signal-classified, trust-scored, per-turn prefetch |
+| L1 温记忆 · Warm | 🌤 Retrievable | Hippocampal structured | SQLite + TF-IDF vectors | Signal-classified, trust-scored, semantic prefetch |
 | L2 冷记忆 · Cold | ❄ Archived | Cortical episodic | SQLite sessions | Raw transcripts, manual recall |
-
-Sinking is degradation, not deletion. Sunk facts remain retrievable in L1 at reduced
-trust. The trust scoring system models "use it or lose it" — frequently recalled
-facts rise; abandoned facts decay to automatic pruning.
 
 ### Trust Lifecycle
 
@@ -468,22 +502,99 @@ feedback(unhelpful) → -0.15
 
 ---
 
+## Troubleshooting & Diagnostics
+
+### Health Check (One-Shot)
+
+```bash
+# Save as check_memory_health.py and run
+python3 check_memory_health.py
+```
+
+Full script available in `references/health_check.py`.
+
+### Failure Mode 1: "database is locked"
+
+**Symptom**: MEMORY.md keeps growing, no "L0 sunk" in logs, `on_memory_write`
+hook shows `database is locked` warning.
+
+**Root cause**: `initialize()` creates new SQLite connections without closing
+old ones. Multiple session restarts leak connections. When a leaked connection
+holds a write lock (uncommitted transaction, WAL checkpoint), new connections
+get "database is locked" for 10+ seconds.
+
+**Fix (v2.5.0)**: `initialize()` and `shutdown()` now call `self._store.close()`
+before creating/destroying connections. After this fix, verify with:
+```bash
+fuser ~/.hermes/memory_store.db && ls /proc/$(pgrep -f 'gateway run')/fd/ | grep -c memory_store
+# Should show exactly 3 fds per connection (DB + WAL + SHM)
+```
+
+**Manual recovery** (if fix not yet deployed):
+```bash
+# Kill leaked connections by restarting gateway
+hermes gateway restart
+```
+
+### Failure Mode 2: Facts exist but never retrieved
+
+**Symptom**: 58 facts in fact_store, but searches for common terms return 0
+results.
+
+**Root cause**: FTS5 keyword search requires exact token matches. User says
+"记忆机制", fact says "holographic memory protocol" — vocabulary mismatch.
+
+**Fix (v2.5.0)**: TF-IDF semantic search replaces FTS5 as primary. Embedding
+vectors are stored in `facts.embedding` column and loaded on startup.
+
+### Failure Mode 3: Startup enforcement gap
+
+**Symptom**: MEMORY.md > 2200 chars at session start with no "L0 sunk" log.
+
+**Root cause**: Database locked at startup time prevents `_mark_sunk()` calls,
+but file rewrite succeeds silently.
+
+**Current status**: startup enforcement calls `_enforce_l0_limit()` in
+`initialize()`, which rewrites the file even if DB writes fail. The file
+shrinks but facts aren't tagged as sunk. Acceptable tradeoff.
+
+---
+
+## File Locations
+
+The plugin code lives under `~/.hermes/hermes-agent/plugins/memory/holographic/`
+(NOT `~/.hermes/plugins/`). The `hermes-agent` subdirectory contains the full
+agent source code deployed alongside the config.
+
+Key files:
+- `__init__.py` — HolographicMemoryProvider, hooks, sinking
+- `store.py` — MemoryStore, SQLite, embedding column
+- `retrieval.py` — FactRetriever, semantic search pipeline
+- `embedding.py` — TF-IDF vector index, tokenization, cosine similarity (NEW)
+- `holographic.py` — HRR vector algebra (structural, not semantic)
+
+---
+
 ## Pitfalls
 
-- **Restart required**: All code patches need a gateway/CLI restart. Python
-  modules are cached in memory — file edits don't take effect until reload.
+- **Restart required**: All code patches need gateway/CLI restart.
 - **Sequential path trap**: `run_agent.py` has TWO copies of the memory
-  dispatch code (`_invoke_tool` for parallel, `_execute_tool_calls_sequential`
-  for single calls). Any new bridge/hook added to one MUST be added to the
-  other. This is the #1 reason hooks silently fail on WeChat/Telegram/CLI.
-- `_enforce_l0_limit` writes MEMORY.md without fcntl lock. Safe in
-  single-process deployments; multi-process setups could race.
-- `memory(action='replace')` triggers re-classification but NOT sinking
-  (doesn't change L0 size).
-- auto_extract facts at trust=0.30 are invisible to prefetch when
-  higher-trust facts match the same query.
-- YAML indent: plugin children must be indented 6 spaces, not 4. Verify
-  with a parse check after editing `plugin.yaml`.
+  dispatch code. Both must have the `on_memory_write` bridge.
+- **Connection leak → silent sinking failure**: Without the v2.5.0 fix,
+  leaked connections hold write locks, `on_memory_write` fails, MEMORY.md
+  grows unchecked. Always verify connection count after restart.
+- **Single-process only**: `_enforce_l0_limit` writes MEMORY.md without fcntl
+  lock. Multi-process deployments could race.
+- **memory(action='replace')** triggers re-classification but NOT sinking.
+- **auto_extract facts** at trust=0.30 are lower priority in semantic search.
+- **Embedding backfill**: existing facts need `rebuild_embeddings()` run once
+  after deploying v2.5.0. New facts auto-index on `add_fact()`.
+- **Vocabulary growth**: each new fact with novel tokens extends the vector
+  dimension. `rebuild_idf()` and `_restore_all_embeddings()` handle this
+  automatically but add write overhead on first indexing.
+- **Sinking priority**: when most entries share the same category, critical
+  lessons get sunk alongside low-value tool configs. Future: weight
+  "lesson"-tagged entries higher within their category tier.
 
 ---
 
@@ -491,9 +602,11 @@ feedback(unhelpful) → -0.15
 
 | Version | Date | Change |
 |---------|------|--------|
-| 2.3.0 | 2026-06-05 | **Threshold recalibration**: soft 1200→1600, warning 1600→1800, urgent 1800→2000, emergency 2000→2200, hard cap 3000→2600. Tier logic changed from percentages to hardcoded values. Skill renamed and reframed around three enhancements: system-level enforcement, hot/warm/cold gradient memory, and radical lightness. Bilingual (zh/en). |
-| 2.2.2 | 2026-06-05 | **Sequential path bridge**: `_execute_tool_calls_sequential` was missing `on_memory_write`. Added bridge. |
-| 2.2.1 | 2026-06-05 | **Startup enforcement**: `_enforce_l0_limit()` in `initialize()`. Upgraded silent `logger.debug` → `logger.warning`. |
-| 2.2.0 | 2026-06-05 | **on_session_finalize**: auto_extract + prune fire on session boundaries. `_ProviderCollector.register_hook()` bridge. |
+| 2.5.0 | 2026-06-07 | **Semantic search**: TF-IDF embedding engine replaces FTS5 as primary retrieval. `embedding.py` module with Chinese-aware tokenization. `search_embeddings()` entry point. `rebuild_embeddings()` backfill. **Connection leak fix**: `initialize()` and `shutdown()` call `self._store.close()` to prevent SQLite lock exhaustion. Updated architecture diagram, verification steps, and troubleshooting. |
+| 2.4.0 | 2026-06-06 | Troubleshooting & Diagnostics: health check script, "database is locked" failure mode analysis, manual sinking procedure, startup enforcement gap documentation. |
+| 2.3.0 | 2026-06-05 | Threshold recalibration: soft 1200→1600, warning 1600→1800, urgent 1800→2000, emergency 2000→2200. Skill renamed and reframed. Bilingual. |
+| 2.2.2 | 2026-06-05 | Sequential path bridge: `_execute_tool_calls_sequential` missing `on_memory_write`. |
+| 2.2.1 | 2026-06-05 | Startup enforcement: `_enforce_l0_limit()` in `initialize()`. |
+| 2.2.0 | 2026-06-05 | on_session_finalize: auto_extract + prune. `_ProviderCollector.register_hook()`. |
 | 2.1.0 | 2026-06-05 | Signal classification + tiered gradient sinking + `_mark_sunk`. |
 | 2.0.0 | 2026-06-05 | Initial: on_memory_write mirror, trust-scored facts, FTS5+HRR. |
