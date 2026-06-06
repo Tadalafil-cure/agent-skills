@@ -6,7 +6,7 @@ A curated collection of installable skill protocols for AI agents — self-conta
 
 | Skill | Description |
 |-------|-------------|
-| [Holographic Enhanced Memory Protocol](./holographic-enhanced-memory-protocol/) | **Four core enhancements:** ① system-level enforced memory hooks (write/session/startup triple-anchor, agent cannot bypass) ② hot/warm/cold gradient memory with tiered sinking and use-it-or-lose-it pruning ③ TF-IDF semantic retrieval replacing FTS5 keyword search (Chinese-aware tokenization, zero API calls) ④ radical lightness — all mechanical operations are code-driven, no new services or dependencies. Mechanically enhanced edition of Hermes' native holographic plugin. |
+| [Holographic Enhanced Memory Protocol](./holographic-enhanced-memory-protocol/) | Mechanically enhanced edition of Hermes' native holographic plugin. **Four core enhancements:** ① system-level enforced memory hooks (write/session/startup triple-anchor, agent cannot bypass) ② hot/warm/cold gradient memory with tiered sinking and use-it-or-lose-it pruning ③ TF-IDF semantic retrieval replacing FTS5 keyword search (Chinese-aware tokenization, zero API calls) ④ radical lightness — all mechanical operations are code-driven, no new services or dependencies. |
 
 ## Usage
 
