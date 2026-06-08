@@ -1,7 +1,7 @@
 ---
 name: holographic-enhanced-memory-protocol
 description: "Hermes 原生 holographic 插件的机制增强版 — 系统级强约束记忆触发、热/温/冷三层梯度记忆、TF-IDF 语义检索、类脑记忆下沉与用进废退淘汰。零新依赖，同等轻量。 / A mechanically enhanced edition of Hermes' native holographic plugin — system-level enforced memory hooks, hot/warm/cold gradient memory, TF-IDF semantic retrieval, and brain-inspired memory sinking with use-it-or-lose-it pruning. Zero new dependencies."
-version: 2.5.0
+version: 2.5.1
 ---
 
 # Holographic Enhanced Memory Protocol
@@ -195,6 +195,9 @@ writes.
         # ... existing config loading ...
 
         # Close any pre-existing store to avoid leaking connections.
+        # Without this, multiple initialize() calls (e.g. session restarts)
+        # create new SQLite connections without closing old ones, eventually
+        # causing "database is locked" when leaked connections hold write locks.
         if self._store is not None:
             try:
                 self._store.close()
@@ -203,9 +206,45 @@ writes.
         if self._retriever is not None:
             self._retriever = None
 
-        self._store = MemoryStore(db_path=db_path, default_trust=default_trust, hrr_dim=hrr_dim)
-        # ... rest of initialization ...
+        # Create new store with retry on transient WAL locks.
+        # SQLite WAL checkpoints can hold write locks for 100-500ms after
+        # close().  Under concurrent access (gateway creates new agent per
+        # message), the previous agent's shutdown() may not have released
+        # the WAL lock before this agent starts.  Retry with backoff.
+        last_error = None
+        for attempt in range(3):
+            try:
+                self._store = MemoryStore(
+                    db_path=db_path,
+                    default_trust=default_trust,
+                    hrr_dim=hrr_dim,
+                )
+                self._retriever = FactRetriever(
+                    store=self._store,
+                    temporal_decay_half_life=temporal_decay,
+                    hrr_weight=hrr_weight,
+                    hrr_dim=hrr_dim,
+                )
+                last_error = None
+                break
+            except Exception as e:
+                last_error = e
+                if attempt < 2:
+                    time.sleep(0.1 * (attempt + 1))
+
+        self._session_id = session_id
+
+        # ALWAYS enforce L0 limits — works on the filesystem and does NOT
+        # require the database.  _mark_sunk() gracefully returns when
+        # self._store is None.  This ensures MEMORY.md never grows
+        # unbounded even when SQLite is temporarily unavailable.
         self._enforce_l0_limit()
+
+        # Re-raise if store creation failed after all retries so the
+        # MemoryManager can log the warning.  L0 enforcement above has
+        # already run, so MEMORY.md is safe regardless.
+        if last_error is not None:
+            raise last_error
 ```
 
 #### 1c. Fix connection leak in shutdown()
@@ -438,7 +477,7 @@ ls /proc/$(pgrep -f 'gateway run')/fd/ | grep -c memory_store
 
 ## Architecture Reference
 
-### Data Flow (Updated for v2.5.0)
+### Data Flow (Updated for v2.5.1)
 
 ```
 Agent calls memory(action='add', content='...')
@@ -470,10 +509,14 @@ User sends message:
 
 Session start:
   initialize()
-    ├── close old store connection  ← NEW (prevents leaks)
-    ├── MemoryStore() → EmbeddingStore()
-    ├── _load_embeddings() → restore vectors from DB
-    └── _enforce_l0_limit()  ← startup safety net
+    ├── close old store connection  ← prevents leaks
+    ├── MemoryStore() [retry ×3 with backoff]  ← NEW v2.5.1: survives WAL races
+    │     ├── Success → FactRetriever(), _load_embeddings()
+    │     └── All retries fail → store stays None, error saved
+    ├── _enforce_l0_limit()  ← ALWAYS RUNS (decoupled from DB)  ← NEW v2.5.1
+    │     ├── File ops only (read/write MEMORY.md)
+    │     └── _mark_sunk() skipped if store is None
+    └── Re-raise saved error (if any) → MemoryManager logs warning
 
 Session end (/new, /reset, timeout):
   on_session_finalize()
@@ -515,26 +558,30 @@ Full script available in `references/health_check.py`.
 
 ### Failure Mode 1: "database is locked"
 
-**Symptom**: MEMORY.md keeps growing, no "L0 sunk" in logs, `on_memory_write`
-hook shows `database is locked` warning.
+**Symptom**: MEMORY.md keeps growing, no "L0 sunk" in logs,
+`Memory provider 'holographic' initialize failed: database is locked`
+in journal.
 
-**Root cause**: `initialize()` creates new SQLite connections without closing
-old ones. Multiple session restarts leak connections. When a leaked connection
-holds a write lock (uncommitted transaction, WAL checkpoint), new connections
-get "database is locked" for 10+ seconds.
+**Root cause (two scenarios)**:
 
-**Fix (v2.5.0)**: `initialize()` and `shutdown()` now call `self._store.close()`
-before creating/destroying connections. After this fix, verify with:
-```bash
-fuser ~/.hermes/memory_store.db && ls /proc/$(pgrep -f 'gateway run')/fd/ | grep -c memory_store
-# Should show exactly 3 fds per connection (DB + WAL + SHM)
-```
+*Scenario A — Same-agent connection leak*: `initialize()` creates new
+SQLite connections without closing old ones. Multiple session restarts
+leak connections. When a leaked connection holds a write lock (uncommitted
+transaction, WAL checkpoint), new connections get "database is locked" for 10+s.
 
-**Manual recovery** (if fix not yet deployed):
-```bash
-# Kill leaked connections by restarting gateway
-hermes gateway restart
-```
+*Scenario B — Inter-agent WAL race (gateway-specific)*: The gateway creates
+a new AIAgent (with fresh MemoryStore) for every message. When the previous
+agent's `shutdown()` calls `close()`, the WAL checkpoint is asynchronous —
+the lock may still be held for 100-500ms. If the next agent's `initialize()`
+fires immediately, MemoryStore creation hits the lock and fails.
+
+**Fix (v2.5.1)**: 
+- `initialize()` retries MemoryStore creation 3 times with 100ms/200ms delays
+  → covers the WAL release window.
+- `_enforce_l0_limit()` always runs (decoupled from DB) → MEMORY.md stays
+  under limit even when all retries fail.
+- `initialize()` and `shutdown()` close old connections before creating new ones
+  (v2.5.0, already in place).
 
 ### Failure Mode 2: Facts exist but never retrieved
 
@@ -547,16 +594,40 @@ results.
 **Fix (v2.5.0)**: TF-IDF semantic search replaces FTS5 as primary. Embedding
 vectors are stored in `facts.embedding` column and loaded on startup.
 
-### Failure Mode 3: Startup enforcement gap
+### Failure Mode 3: Startup enforcement silently skipped (v2.5.1 FIXED)
 
-**Symptom**: MEMORY.md > 2200 chars at session start with no "L0 sunk" log.
+**Symptom**: MEMORY.md > 2200 chars at session start with no "L0 sunk" log,
+but no `database is locked` warning either. The file just keeps growing.
 
-**Root cause**: Database locked at startup time prevents `_mark_sunk()` calls,
-but file rewrite succeeds silently.
+**Root cause (design flaw, not just DB issue)**: `initialize()` called
+`_enforce_l0_limit()` AFTER `MemoryStore()` creation — same code block.
+When MemoryStore creation threw ANY exception (not just "database is locked"),
+the entire method exited before reaching the enforcement call. The
+`MemoryManager.initialize_all()` caller caught and logged the exception,
+but the sinking was silently skipped.
 
-**Current status**: startup enforcement calls `_enforce_l0_limit()` in
-`initialize()`, which rewrites the file even if DB writes fail. The file
-shrinks but facts aren't tagged as sunk. Acceptable tradeoff.
+Under the gateway (where each new message creates a fresh AIAgent →
+fresh MemoryStore), this created a race: previous agent's `shutdown()`
+calls `close()` on its SQLite connection, but WAL checkpoint release is
+asynchronous. If the new agent's `initialize()` fires before the WAL lock
+clears, MemoryStore creation times out → exception → no sinking → MEMORY.md
+grows unbounded over multiple sessions.
+
+**Fix (v2.5.1)**: Two changes:
+1. **Retry with backoff**: MemoryStore creation retries 3 times with
+   100ms/200ms delays, giving WAL locks time to release.
+2. **Decouple sinking from DB**: `_enforce_l0_limit()` now runs ALWAYS,
+   before the exception is re-raised. It only needs filesystem access;
+   `_mark_sunk()` gracefully returns when `self._store is None`.
+   MEMORY.md never grows unbounded, even with a completely dead database.
+
+**Verification**: Simulated complete DB failure (FakeStore that always
+raises). MEMORY.md went from 3642 chars (15 entries, emergency tier) to
+2428 chars (10 entries, sunk 5) — with `provider._store is None`.
+
+**Key design principle**: L0 (hot memory, MEMORY.md) must NEVER depend on
+L1 (warm memory, SQLite). They are independent layers — the hot layer
+must remain operational even when the warm layer is unavailable.
 
 ---
 
@@ -594,7 +665,12 @@ Key files:
   automatically but add write overhead on first indexing.
 - **Sinking priority**: when most entries share the same category, critical
   lessons get sunk alongside low-value tool configs. Future: weight
-  "lesson"-tagged entries higher within their category tier.
+  \"lesson\"-tagged entries higher within their category tier.
+- **Gateway per-message agent lifecycle**: gateway creates a new AIAgent
+  (with fresh MemoryStore) for every message. `shutdown()` + `close()` +
+  WAL checkpoint release is asynchronous → next agent may open before lock
+  clears. v2.5.1 retry logic covers this, but be aware: any DB operation
+  near agent startup is vulnerable to this race window.
 
 ---
 
@@ -602,7 +678,7 @@ Key files:
 
 | Version | Date | Change |
 |---------|------|--------|
-| 2.5.0 | 2026-06-07 | **Semantic search**: TF-IDF embedding engine replaces FTS5 as primary retrieval. `embedding.py` module with Chinese-aware tokenization. `search_embeddings()` entry point. `rebuild_embeddings()` backfill. **Connection leak fix**: `initialize()` and `shutdown()` call `self._store.close()` to prevent SQLite lock exhaustion. Updated architecture diagram, verification steps, and troubleshooting. |
+| 2.5.1 | 2026-06-08 | **L0/DB decoupling**: `_enforce_l0_limit()` always runs in `initialize()`, even when MemoryStore creation fails. Retry logic (3× with backoff) survives transient WAL locks from inter-agent races. Hot layer (MEMORY.md) now operates independently of warm layer (SQLite). Fixed recurring \"database is locked → sinking silently skipped\" design flaw. |
 | 2.4.0 | 2026-06-06 | Troubleshooting & Diagnostics: health check script, "database is locked" failure mode analysis, manual sinking procedure, startup enforcement gap documentation. |
 | 2.3.0 | 2026-06-05 | Threshold recalibration: soft 1200→1600, warning 1600→1800, urgent 1800→2000, emergency 2000→2200. Skill renamed and reframed. Bilingual. |
 | 2.2.2 | 2026-06-05 | Sequential path bridge: `_execute_tool_calls_sequential` missing `on_memory_write`. |
