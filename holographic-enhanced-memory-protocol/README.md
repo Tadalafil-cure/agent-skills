@@ -51,12 +51,15 @@
 
 *Zero new services, databases, or dependencies. All mechanical operations are code-driven — zero LLM token cost.*
 
-### 五、L0/DB 解耦 + 健壮性保障（v2.5.1） · L0/DB Decoupling + Resilience
+### 五、L0/DB 解耦 + 数据库锁全面修复（v2.5.2） · L0/DB Decoupling + Lock Fix
 
 核心原则：热层（L0, MEMORY.md）必须独立于温层（L1, SQLite）运行。
 
-- **WAL 竞态重试**：MemoryStore 创建失败时自动重试 3 次（100ms/200ms backoff）
-- **启动下沉始终执行**：`_enforce_l0_limit()` 只依赖文件系统，不依赖数据库。即使 SQLite 完全不可用，MEMORY.md 也不会无限增长
+- **WAL pragma 调优**：`busy_timeout=60s`, `synchronous=NORMAL`, `wal_autocheckpoint=1000` —— 降低锁争用，使锁变为暂态而非硬失败
+- **重试窗口扩大**：MemoryStore 创建重试 10 次（0.3→2.0s 退避） + 关连接后 0.3s 等待
+- **干净关闭**：`close()` 执行 `wal_checkpoint(PASSIVE)` 释放写锁
+- **启动零争用**：`_load_embeddings()` 改用增量回填，不再全量重写向量（消除会话打开时的写锁争用）
+- **实测验证**：部署后 5+ 次会话零锁错误
 
 *The hot layer must NEVER depend on the warm layer. Startup sinking always runs — filesystem only, no DB required.*
 
@@ -66,7 +69,8 @@
 
 | Version | Date | Change |
 |---------|------|--------|
-| 2.5.1 | 2026-06-08 | L0/DB 解耦 + WAL 竞态重试 |
+| 2.5.2 | 2026-06-14 | WAL pragma 调优 + 10 重试 + 干净关闭 + 增量回填。实测零锁错误 |
+| 2.5.1 | 2026-06-08 | L0/DB 解耦 + 3 重试 WAL 竞态 |
 | 2.5.0 | 2026-06-07 | TF-IDF 语义检索 |
 | 2.4.0 | 2026-06-06 | 诊断工具与故障分析 |
 | 2.3.0 | 2026-06-05 | 阈值校准 1600→2200 |
