@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/home/admin/.hermes/hermes-agent/venv/lib/python3.11/site-packages/botasaurus/browser_decorator.py", line 199, in run_task
-    result = func(driver, data)
-             ^^^^^^^^^^^^^^^^^^
-  File "/tmp/deep_search_botasaurus.py", line 83, in extract_search_results
-    h3 = g.select_one('h3')
-         ^^^^^^^^^^^^
-AttributeError: 'Element' object has no attribute 'select_one'
