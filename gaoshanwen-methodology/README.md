@@ -82,7 +82,7 @@ python3 ~/.hermes/skills/gaoshanwen-methodology/scripts/check_deps.py
 ## 构建信息
 
 - **版本**：v5.11.0
-- **方法**：nuwa-skill（表达 DNA 分析）
+- **方法**：mind-distill v3（方法论提取）、nuwa-skill（表达 DNA 分析）
 - **借鉴来源**：GAOBO 执行框架（gaobo-macro-market-method）、五大框架与风格校准（gaoshanwen-skill）
 - **验证**：32 篇逆向验证（三轮），26 ✅ / 5 ⚠️ / 0 ❌
 - **许可**：非官方学习版，仅代表对公开文章的方法论提炼，不代表高善文本人或其所属机构
