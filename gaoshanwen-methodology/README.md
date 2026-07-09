@@ -75,7 +75,6 @@ python3 ~/.hermes/skills/gaoshanwen-methodology/scripts/check_deps.py
 
 - **[GAOBO 执行框架]** — 借鉴 gaobo-macro-market-method，提供了五步执行流程、数据处理规范、大类资产传导速查表等操作层核心模块
 - **[gaoshanwen-skill](https://github.com/kevin12369/gaoshanwen-skill)** — 五大核心分析框架、10 个完整示例、风格校准方法论、反例库设计思路。其对中国冲击 2.0、跨国比较框架、历史案例系统化整理的贡献已融入本 skill 的能力层和操作层
-- **mind-distill v3** — 9 Agent 并行提取 + 四重验证 + 3 轮 Loop 精炼，完成 108 篇文章/70 万字的初始蒸馏
 - **nuwa-skill** — 表达 DNA 分析，提炼高善文句式指纹、锋利度梯度、比喻体系
 
 谨向高善文先生（1971-2026）致敬。本文方法论是对其公开著作和演讲的提炼，不代表本人观点。
@@ -83,7 +82,7 @@ python3 ~/.hermes/skills/gaoshanwen-methodology/scripts/check_deps.py
 ## 构建信息
 
 - **版本**：v5.11.0
-- **方法**：mind-distill v3（9 Agent 并行提取 + 四重验证 + 3 轮 Loop 精炼）+ nuwa-skill（表达 DNA 分析）
+- **方法**：nuwa-skill（表达 DNA 分析）
 - **借鉴来源**：GAOBO 执行框架（gaobo-macro-market-method）、五大框架与风格校准（gaoshanwen-skill）
 - **验证**：32 篇逆向验证（三轮），26 ✅ / 5 ⚠️ / 0 ❌
 - **许可**：非官方学习版，仅代表对公开文章的方法论提炼，不代表高善文本人或其所属机构
