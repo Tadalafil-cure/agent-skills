@@ -1,0 +1,238 @@
+{
+  "meta": {
+    "code": "300274",
+    "generated_at": "2026-07-01T08:05:37",
+    "data_range": "2025-07-01 ~ 2026-06-30",
+    "lookback_days": 252,
+    "forward_days": 22,
+    "valid_rows": 242
+  },
+  "n_rows": 222,
+  "factor_ranking": [
+    {
+      "factor": "ret_20d",
+      "name": "20日动量",
+      "iv": 0.7883,
+      "psi": 2.7669,
+      "ic": 0.0584,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "adx",
+      "name": "ADX趋势",
+      "iv": 0.7296,
+      "psi": 4.417,
+      "ic": 0.3778,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "macd_hist",
+      "name": "MACD柱",
+      "iv": 0.4592,
+      "psi": 1.5077,
+      "ic": 0.0502,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "rsi14",
+      "name": "RSI(14)",
+      "iv": 0.4457,
+      "psi": 1.8633,
+      "ic": 0.0564,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "kdj_k",
+      "name": "KDJ-K",
+      "iv": 0.3553,
+      "psi": 1.217,
+      "ic": 0.1801,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "atr_pct",
+      "name": "ATR波动率",
+      "iv": 0.3289,
+      "psi": 1.6261,
+      "ic": -0.1783,
+      "grade": "★★ 有效但不稳定",
+      "direction": "反向（因子值越高→跌的概率越高）"
+    },
+    {
+      "factor": "kdj_j",
+      "name": "KDJ-J",
+      "iv": 0.3039,
+      "psi": 0.7025,
+      "ic": 0.1601,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "ma5_ma20_ratio",
+      "name": "MA5/MA20比",
+      "iv": 0.3011,
+      "psi": 2.5243,
+      "ic": 0.0864,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "macd_dif_dea_gap",
+      "name": "MACD距离",
+      "iv": 0.2919,
+      "psi": 0.6062,
+      "ic": 0.0866,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "boll_bandwidth",
+      "name": "布林带宽",
+      "iv": 0.2837,
+      "psi": 2.4613,
+      "ic": 0.1744,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "boll_position",
+      "name": "布林位置",
+      "iv": 0.1484,
+      "psi": 1.5267,
+      "ic": 0.0851,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "ma20_div",
+      "name": "MA20偏离率",
+      "iv": 0.1097,
+      "psi": 2.4542,
+      "ic": 0.0835,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "vol_ratio",
+      "name": "量比",
+      "iv": 0.0539,
+      "psi": 0.1276,
+      "ic": 0.0247,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "ret_5d",
+      "name": "5日动量",
+      "iv": 0.031,
+      "psi": 0.9658,
+      "ic": 0.0979,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    }
+  ],
+  "correlation_warnings": [],
+  "stability_alerts": [
+    {
+      "factor": "ret_20d",
+      "psi": 2.7669,
+      "message": "20日动量 PSI=2.7669≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "adx",
+      "psi": 4.417,
+      "message": "ADX趋势 PSI=4.417≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "macd_hist",
+      "psi": 1.5077,
+      "message": "MACD柱 PSI=1.5077≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "rsi14",
+      "psi": 1.8633,
+      "message": "RSI(14) PSI=1.8633≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "kdj_k",
+      "psi": 1.217,
+      "message": "KDJ-K PSI=1.217≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "atr_pct",
+      "psi": 1.6261,
+      "message": "ATR波动率 PSI=1.6261≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "kdj_j",
+      "psi": 0.7025,
+      "message": "KDJ-J PSI=0.7025≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "ma5_ma20_ratio",
+      "psi": 2.5243,
+      "message": "MA5/MA20比 PSI=2.5243≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "macd_dif_dea_gap",
+      "psi": 0.6062,
+      "message": "MACD距离 PSI=0.6062≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "boll_bandwidth",
+      "psi": 2.4613,
+      "message": "布林带宽 PSI=2.4613≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "boll_position",
+      "psi": 1.5267,
+      "message": "布林位置 PSI=1.5267≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "ma20_div",
+      "psi": 2.4542,
+      "message": "MA20偏离率 PSI=2.4542≥0.25，近期分布与早期显著不同，因子可能失效"
+    },
+    {
+      "factor": "ret_5d",
+      "psi": 0.9658,
+      "message": "5日动量 PSI=0.9658≥0.25，近期分布与早期显著不同，因子可能失效"
+    }
+  ],
+  "effective_sets": {
+    "去冗余": {
+      "scheme": "去冗余（IV≥0.02, PSI<0.45, |r|<0.7）",
+      "factors": [
+        "vol_ratio"
+      ],
+      "count": 1,
+      "avg_iv": 0.0539,
+      "avg_psi": 0.1276,
+      "avg_ic": 0.0247
+    },
+    "高区分": {
+      "scheme": "高区分（IV≥0.10, PSI<0.45, |r|<0.7）",
+      "factors": [],
+      "count": 0,
+      "avg_iv": 0,
+      "avg_psi": 0,
+      "avg_ic": 0
+    },
+    "稳定优先": {
+      "scheme": "稳定优先（IV≥0.01, PSI<0.25, |r|<0.7）",
+      "factors": [
+        "vol_ratio"
+      ],
+      "count": 1,
+      "avg_iv": 0.0539,
+      "avg_psi": 0.1276,
+      "avg_ic": 0.0247
+    }
+  },
+  "summary": "300274：去冗余=1个 / 高区分=0个 / 稳定优先=1个，Top3=['20日动量', 'ADX趋势', 'MACD柱']"
+}

@@ -1,0 +1,252 @@
+{
+  "meta": {
+    "index": "科技桶",
+    "index_code": "000688,399673",
+    "generated_at": "2026-06-23T12:19:20",
+    "data_range": "2025-07-03 ~ 2026-06-23",
+    "lookback_days": 252,
+    "forward_days": 22,
+    "stock_count_total": 100,
+    "stock_count_used": 100,
+    "valid_rows": 23215,
+    "sampled": false
+  },
+  "n_rows": 22015,
+  "factor_ranking": [
+    {
+      "factor": "macd_dif_dea_gap",
+      "name": "MACD距离",
+      "iv": 0.1002,
+      "psi": 0.0088,
+      "ic": 0.1178,
+      "grade": "★★★★★ 强有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "atr_pct",
+      "name": "ATR波动率",
+      "iv": 0.0955,
+      "psi": 0.0062,
+      "ic": -0.1346,
+      "grade": "★★★ 有效",
+      "direction": "反向（因子值越高→跌的概率越高）"
+    },
+    {
+      "factor": "rsi14",
+      "name": "RSI(14)",
+      "iv": 0.0936,
+      "psi": 0.0166,
+      "ic": 0.1275,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "macd_hist",
+      "name": "MACD柱",
+      "iv": 0.088,
+      "psi": 0.1972,
+      "ic": 0.1171,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "ma20_div",
+      "name": "MA20偏离率",
+      "iv": 0.0506,
+      "psi": 0.0103,
+      "ic": 0.073,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "boll_bandwidth",
+      "name": "布林带宽",
+      "iv": 0.0466,
+      "psi": 0.0147,
+      "ic": -0.0776,
+      "grade": "★★★ 有效",
+      "direction": "反向（因子值越高→跌的概率越高）"
+    },
+    {
+      "factor": "kdj_k",
+      "name": "KDJ-K",
+      "iv": 0.0434,
+      "psi": 0.0037,
+      "ic": 0.0958,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "boll_position",
+      "name": "布林位置",
+      "iv": 0.0405,
+      "psi": 0.0055,
+      "ic": 0.0977,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "ma5_ma20_ratio",
+      "name": "MA5/MA20比",
+      "iv": 0.0403,
+      "psi": 0.0099,
+      "ic": 0.068,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "ret_20d",
+      "name": "20日动量",
+      "iv": 0.0385,
+      "psi": 0.011,
+      "ic": 0.0359,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "ret_5d",
+      "name": "5日动量",
+      "iv": 0.0331,
+      "psi": 0.0042,
+      "ic": 0.0507,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "kdj_j",
+      "name": "KDJ-J",
+      "iv": 0.0296,
+      "psi": 0.0027,
+      "ic": 0.0739,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "vol_ratio",
+      "name": "量比",
+      "iv": 0.0249,
+      "psi": 0.0078,
+      "ic": 0.0778,
+      "grade": "★★★ 有效",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    },
+    {
+      "factor": "adx",
+      "name": "ADX趋势",
+      "iv": 0.0212,
+      "psi": 0.0293,
+      "ic": 0.0276,
+      "grade": "★★ 有效但不稳定",
+      "direction": "正向（因子值越高→涨的概率越高）"
+    }
+  ],
+  "correlation_warnings": [
+    {
+      "pair": [
+        "ma20_div",
+        "ma5_ma20_ratio"
+      ],
+      "r": 0.906,
+      "action": "去 ma5_ma20_ratio（IV=0.0403 低于 ma20_div IV=0.0506）"
+    },
+    {
+      "pair": [
+        "ma20_div",
+        "rsi14"
+      ],
+      "r": 0.843,
+      "action": "去 ma20_div（IV=0.0506 低于 rsi14 IV=0.0936）"
+    },
+    {
+      "pair": [
+        "ma20_div",
+        "kdj_k"
+      ],
+      "r": 0.789,
+      "action": "去 kdj_k（IV=0.0434 低于 ma20_div IV=0.0506）"
+    },
+    {
+      "pair": [
+        "ma20_div",
+        "boll_position"
+      ],
+      "r": 0.825,
+      "action": "去 boll_position（IV=0.0405 低于 ma20_div IV=0.0506）"
+    },
+    {
+      "pair": [
+        "ma20_div",
+        "ret_5d"
+      ],
+      "r": 0.795,
+      "action": "去 ret_5d（IV=0.0331 低于 ma20_div IV=0.0506）"
+    },
+    {
+      "pair": [
+        "ma20_div",
+        "ret_20d"
+      ],
+      "r": 0.856,
+      "action": "去 ret_20d（IV=0.0385 低于 ma20_div IV=0.0506）"
+    },
+    {
+      "pair": [
+        "kdj_k",
+        "kdj_j"
+      ],
+      "r": 0.896,
+      "action": "去 kdj_j（IV=0.0296 低于 kdj_k IV=0.0434）"
+    },
+    {
+      "pair": [
+        "boll_bandwidth",
+        "atr_pct"
+      ],
+      "r": 0.713,
+      "action": "去 boll_bandwidth（IV=0.0466 低于 atr_pct IV=0.0955）"
+    }
+  ],
+  "stability_alerts": [],
+  "effective_sets": {
+    "去冗余": {
+      "scheme": "去冗余（IV≥0.02, PSI<0.25, |r|<0.7）",
+      "factors": [
+        "macd_dif_dea_gap",
+        "atr_pct",
+        "rsi14",
+        "macd_hist",
+        "vol_ratio",
+        "adx"
+      ],
+      "count": 6,
+      "avg_iv": 0.0706,
+      "avg_psi": 0.0443,
+      "avg_ic": 0.1004
+    },
+    "高区分": {
+      "scheme": "高区分（IV≥0.10, PSI<0.25, |r|<0.7）",
+      "factors": [
+        "macd_dif_dea_gap"
+      ],
+      "count": 1,
+      "avg_iv": 0.1002,
+      "avg_psi": 0.0088,
+      "avg_ic": 0.1178
+    },
+    "稳定优先": {
+      "scheme": "稳定优先（IV≥0.01, PSI<0.10, |r|<0.7）",
+      "factors": [
+        "macd_dif_dea_gap",
+        "atr_pct",
+        "rsi14",
+        "vol_ratio",
+        "adx"
+      ],
+      "count": 5,
+      "avg_iv": 0.0671,
+      "avg_psi": 0.0137,
+      "avg_ic": 0.0971
+    }
+  },
+  "summary": "科技桶：去冗余=6个 / 高区分=1个 / 稳定优先=5个，Top3=['MACD距离', 'ATR波动率', 'RSI(14)']"
+}

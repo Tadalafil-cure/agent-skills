@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+"""
+A-share-analyst-team · 网络搜索采集器 (F#11)
+ddgs 搜索 → scrapling 抓取 → 结构化 JSON
+
+用法:
+    python3 collect_web_search.py --symbol 002709 --name 天赐材料 --industry 电解液 --output /tmp/xxx/data/web_search_data.json
+"""
+
+import argparse, json, os, sys, time, re, subprocess
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse
+from datetime import datetime
+
+
+# ── 配置 ──
+MAX_RESULTS_PER_QUERY = 10
+MAX_WORKERS = 3
+SCRAPING_TIMEOUT = 20
+SEARCH_TIMEOUT = 45
+SKIP_DOMAINS = {"mp.weixin.qq.com"}
+
+
+def run(cmd, timeout=30):
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        return r.stdout.strip(), r.returncode
+    except subprocess.TimeoutExpired:
+        return "", 124
+    except AttributeError:
+        return "", 124
+
+
+# ── ddgs 搜索（Python API + 文件锁限频，v0.8.8） ──
+
+MIN_SEARCH_INTERVAL = 20  # 最小搜索间隔（秒），与 ddgs_safe 一致
+_lock_dir = None
+
+def _set_lock_dir(path):
+    global _lock_dir
+    _lock_dir = Path(path)
+
+def _get_lock_path():
+    d = _lock_dir or Path(os.environ.get("TASK_BASE", "/tmp")) / "data"
+    return d / ".ddgs_lock"
+
+def _wait_lock():
+    lock = _get_lock_path()
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    if lock.exists():
+        try:
+            last_ts = float(lock.read_text().strip())
+            elapsed = time.time() - last_ts
+            if elapsed < MIN_SEARCH_INTERVAL:
+                wait = MIN_SEARCH_INTERVAL - elapsed
+                print(f"  [ddgs] 距上次搜索 {elapsed:.1f}s，等待 {wait:.1f}s...", file=sys.stderr)
+                time.sleep(wait)
+        except (ValueError, OSError):
+            pass
+
+def _update_lock():
+    lock = _get_lock_path()
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    lock.write_text(str(time.time()))
+
+def search_ddgs(query, max_results=MAX_RESULTS_PER_QUERY):
+    """使用 ddgs Python API 搜索，带文件锁限频（≥20s 间隔）。"""
+    _wait_lock()
+    try:
+        from ddgs import DDGS
+        ddgs = DDGS()
+        raw = list(ddgs.text(query, max_results=max_results))
+        _update_lock()
+        results = []
+        for r in raw:
+            results.append({
+                "title": r.get("title", ""),
+                "href": r.get("href", ""),
+                "body": r.get("body", ""),
+            })
+        return results
+    except ImportError:
+        _update_lock()
+        print("[ddgs] ddgs package not installed. pip install ddgs", file=sys.stderr)
+        return []
+    except Exception as e:
+        _update_lock()
+        print(f"[ddgs] search error: {e}", file=sys.stderr)
+        return []
+
+
+# ── scrapling 抓取 ─────────────────────
+
+def _scraping_get(url, out_path):
+    _, code = run(f"scrapling extract get '{url}' {out_path}", timeout=SCRAPING_TIMEOUT)
+    if code == 0 and Path(out_path).exists() and Path(out_path).stat().st_size > 50:
+        return True
+    return False
+
+
+def _scraping_fetch(url, out_path):
+    _, code = run(
+        f"scrapling extract fetch '{url}' {out_path} --disable-resources --network-idle",
+        timeout=SCRAPING_TIMEOUT + 10
+    )
+    if code == 0 and Path(out_path).exists() and Path(out_path).stat().st_size > 50:
+        return True
+    return False
+
+
+def extract_summary_from_md(filepath):
+    if not Path(filepath).exists():
+        return ""
+    try:
+        text = Path(filepath).read_text(encoding="utf-8", errors="replace")
+    except:
+        return ""
+
+    keywords = ["业务", "产品", "客户", "技术", "产能", "合作", "研发",
+                "行业", "市场", "政策", "趋势", "竞争", "份额", "专利",
+                "突破", "进展", "公告", "项目", "战略"]
+    lines = []
+    for line in text.split("\n"):
+        s = line.strip()
+        if len(s) < 25:
+            continue
+        skip = ["skip to", "navigation", "sidebar", "footer", "登录", "注册",
+                "首页", "搜索", "var ", "function(", "window.", "document.",
+                "img src", "logo", "立即下载", "扫码", "_nuxt", "static"]
+        if any(w.lower() in s[:30].lower() for w in skip):
+            continue
+        if any(kw in s for kw in keywords):
+            lines.append(s[:200])
+        if len(lines) >= 3:
+            break
+    return " | ".join(lines) if lines else text[:200]
+
+
+def extract_url_content(url, idx, tmpdir):
+    domain = urlparse(url).netloc.lower()
+    if domain in SKIP_DOMAINS:
+        return "skipped", ""
+
+    fname = f"{idx:02d}_{domain.replace('.','_')}.md"
+    out_md = Path(tmpdir) / fname
+
+    if _scraping_get(url, str(out_md)):
+        summary = extract_summary_from_md(str(out_md))
+        if summary and not _is_junk(summary):
+            return "scrapling_get", summary
+
+    if _scraping_fetch(url, str(out_md)):
+        summary = extract_summary_from_md(str(out_md))
+        if summary and not _is_junk(summary):
+            return "scrapling_fetch", summary
+
+    return "failed", ""
+
+
+def _is_junk(text):
+    junk = ["Enable JavaScript", "cookies to continue", "Please enable JS",
+            "请启用JavaScript", "403 Forbidden", "Access Denied"]
+    t = text[:500].lower()
+    return any(j.lower() in t for j in junk)
+
+
+# ── 主流程 ──────────────────────────────
+
+def collect_search(query, label, tmpdir):
+    results = search_ddgs(query)
+    seen = set()
+    unique = []
+    for r in results:
+        href = r.get("href", "")
+        if href and href not in seen:
+            seen.add(href)
+            unique.append(r)
+    unique = unique[:MAX_RESULTS_PER_QUERY]
+
+    print(f"  [{label}] 搜索到 {len(unique)} 条（去重后）")
+
+    items = []
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {}
+        for idx, r in enumerate(unique):
+            url = r.get("href", "")
+            if not url:
+                continue
+            f = pool.submit(extract_url_content, url, idx + 1, tmpdir)
+            futures[f] = (idx, r)
+
+        for f in as_completed(futures):
+            idx, r = futures[f]
+            try:
+                method, summary = f.result()
+            except Exception as e:
+                method, summary = "failed", str(e)
+
+            items.append({
+                "idx": idx + 1,
+                "title": r.get("title", ""),
+                "url": r.get("href", ""),
+                "snippet": r.get("body", "")[:200],
+                "method": method,
+                "summary": summary[:500] if summary else "",
+            })
+
+    items.sort(key=lambda x: x["idx"])
+    return {
+        "query": query,
+        "label": label,
+        "total_scraped": sum(1 for i in items if i["method"] != "failed"),
+        "total_failed": sum(1 for i in items if i["method"] == "failed"),
+        "results": items,
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description="A-team 网络搜索采集器 (F#11)")
+    parser.add_argument("--symbol", required=True, help="股票代码 (如 002709)")
+    parser.add_argument("--name", required=True, help="股票简称 (如 天赐材料)")
+    parser.add_argument("--industry", required=True, help="所属行业 (如 电解液)")
+    parser.add_argument("--output", required=True, help="输出 JSON 路径")
+    args = parser.parse_args()
+
+    tmpdir = Path(args.output).parent / "web_search_tmp"
+    tmpdir.mkdir(parents=True, exist_ok=True)
+
+    # 设置 ddgs 限频锁目录（与 ddgs_safe 共享）
+    _set_lock_dir(tmpdir.parent)
+
+    print(f"[F#11] 网络搜索采集: {args.name}({args.symbol}) · 行业: {args.industry}")
+
+    # ── 个股搜索：多轮短词（串行 + URL 去重合并）──
+    stock_queries = [
+        (f"{args.name} {args.symbol}",       "个股·综合"),
+        (f"{args.name} 产能 订单 项目",       "个股·产能"),
+        (f"{args.name} 技术 客户 产品",       "个股·技术"),
+    ]
+    stock_all = []
+    stock_seen = set()
+    for i, (q, label) in enumerate(stock_queries):
+        data = collect_search(q, label, tmpdir)
+        for r in data["results"]:
+            url = r.get("url", "")
+            if url and url not in stock_seen:
+                stock_seen.add(url)
+                stock_all.append(r)
+        if i < len(stock_queries) - 1:
+            print(f"  → 冷却 12s 后进入下一轮...")
+            time.sleep(12)
+    stock_data = {
+        "queries": [q for q, _ in stock_queries],
+        "label": "个股动态",
+        "total_scraped": sum(1 for r in stock_all if r.get("method") != "failed"),
+        "total_failed": sum(1 for r in stock_all if r.get("method") == "failed"),
+        "results": stock_all[:MAX_RESULTS_PER_QUERY],
+    }
+
+    # ── 行业搜索：多轮短词（串行 + URL 去重合并）──
+    industry_queries = [
+        (f"{args.industry} 产业链 景气度",     "行业·产业链"),
+        (f"{args.industry} 上下游 订单 出货量", "行业·供需"),
+        (f"{args.industry} 政策 趋势 竞争",     "行业·政策"),
+    ]
+    ind_all = []
+    ind_seen = set()
+    for i, (q, label) in enumerate(industry_queries):
+        data = collect_search(q, label, tmpdir)
+        for r in data["results"]:
+            url = r.get("url", "")
+            if url and url not in ind_seen:
+                ind_seen.add(url)
+                ind_all.append(r)
+        if i < len(industry_queries) - 1:
+            print(f"  → 冷却 12s 后进入下一轮...")
+            time.sleep(12)
+    industry_data = {
+        "queries": [q for q, _ in industry_queries],
+        "label": "行业动态",
+        "total_scraped": sum(1 for r in ind_all if r.get("method") != "failed"),
+        "total_failed": sum(1 for r in ind_all if r.get("method") == "failed"),
+        "results": ind_all[:MAX_RESULTS_PER_QUERY],
+    }
+
+    output = {
+        "meta": {
+            "symbol": args.symbol,
+            "name": args.name,
+            "industry": args.industry,
+            "generated_at": datetime.now().isoformat(),
+            "source": "ddgs + scrapling",
+        },
+        "stock_news": stock_data,
+        "industry_news": industry_data,
+    }
+
+    Path(args.output).write_text(json.dumps(output, ensure_ascii=False, indent=2))
+    print(f"[F#11] 完成 → {args.output}")
+    print(f"  个股: {stock_data['total_scraped']} 条 (3轮搜索去重后保留{len(stock_data['results'])}条)")
+    print(f"  行业: {industry_data['total_scraped']}/{len(industry_data['results'])} 抓取成功")
+
+
+if __name__ == "__main__":
+    main()
