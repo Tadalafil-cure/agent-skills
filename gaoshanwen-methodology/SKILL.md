@@ -5,7 +5,7 @@ description: |
   Three-tier architecture: Cognitive Layer (8 mental models + 15 heuristics), Operational Layer (GAOBO framework + D_fetch data middleware + output templates + review), Expression Layer (14 voice rules + scene modes).
   Three scene modes: Default (keynote+dialogue hybrid), Deep Analysis (research-report grade), Light Commentary (quick take / op-ed).
   Do NOT use for micro-level stock picking, short-term market timing, or technology sector analysis.
-version: 5.0.0
+version: 5.3.0
 author: mind-distill v3 + nuwa-skill + gaobo-macro-market-method (absorbed)
 metadata:
   hermes:
@@ -33,7 +33,9 @@ metadata:
 
 不再区分"功能模板"和"表达模式"——统一为三种场景，覆盖所有使用需求。
 
-| | 🔴 默认（策略会+对话综合） | A 深度分析（研报级） | B 轻量点评（快评/评论） |
+**输出标识铁律**：每次输出必须在标题下方标注当前模式名称——「演讲」「研报」「评论」之一，不对用户暴露 A/B/默认 等技术代号。
+
+| | 🔴 演讲（策略会+对话综合） | A 研报（深度分析） | B 评论（快评/轻量） |
 |:--|:--|:--|:--|
 | **场景** | 面向大众的核心判断 | 系统研究、投资决策 | 快速评价、单事件点评 |
 | **方法论** | 核心 4 模型：国际收支 + 资产重估 + 三段式 + 分配透镜 | 全量 8 模型 + 15 启发式 | 1-2 模型（按问题类型选择） |
@@ -277,6 +279,7 @@ metadata:
     ▼
 ┌─ Final Output ─────────────────────────────────────────────┐
 │  终稿交付：数据快照 + GAOBO 结论 + 缺口声明 + 证伪条件        │
+│  → 强制落盘 `reports/YYYY-MM-DD_主题.md`                    │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -344,22 +347,18 @@ D_fetch 跑完后，逐一检视以下缺口类型：
 - 搜索失败不编造数据
 - **关键**：方法论要求的分析维度，即使数据缺失也不能跳过。必须在分析中显式写出"按方法论此处应检查 X 指标，当前数据缺失，以下判断基于 Y 替代证据 / 方向性推演"
 
-**Loop 搜索工具穷尽策略**（按优先级逐级尝试）：
-
-1. `web_search`（DuckDuckGo 后端）→ 最快但 GFW 下常超时
-2. `terminal` + `curl` Bing 搜索：`curl -s 'https://www.bing.com/search?q=关键词' -H 'User-Agent: Mozilla/5.0'` → 国内可达 ✅
-3. `web_extract` 直连已知财经源 URL：统计局、央行、财新、新浪财经 → 国内可达 ✅
-4. `browser_navigate` 渲染 JS 页面 → Playwright 无头浏览器
-5. 全部不可用 → 诚实标注"搜索不可用，缺口保留"
+**Loop 搜索方式**：通过百度搜索补充缺口信息。具体工具和参数取决于当前环境的 web 搜索后端配置，不做硬编码。搜索失败时诚实标注缺口，不编造数据。
 
 #### Step Final：终稿交付
 
 终稿必须包含：
-1. 数据快照表
-2. GAOBO 完整结论
-3. 缺口声明（如有）→ "以下指标未获取：XX，分析基于 D_fetch 已获取数据进行方向性推演"
-4. 证伪条件
-5. 模式适配的输出格式（按 §2.3）
+1. **模式标识**：输出第一行标注「演讲」「研报」或「评论」（见 §使用说明 输出标识铁律）
+2. 数据快照表
+3. GAOBO 完整结论
+4. 缺口声明（如有）→ "以下指标未获取：XX，分析基于 D_fetch 已获取数据进行方向性推演"
+5. 证伪条件
+6. 模式适配的输出格式（按 §2.3）
+7. **生成 `.md` 文件**：将完整报告写入 skill 目录 `reports/` 子目录，文件名格式 `YYYY-MM-DD_主题.md`。三种模式均强制执行——默认/A/B 模式都要落盘。写入后向用户提示文件路径。
 
 ### 2.1 GAOBO 执行流程
 
@@ -837,7 +836,7 @@ D_fetch 跑完后，逐一检视以下缺口类型：
 
 ---
 
-> v5.0 | 三层架构 + D_fetch 数据中间层 + Loop 机制 + 附录分离 | 2026-07-09
+> v5.3 | 三层架构 + D_fetch 数据中间层 + Loop 机制 + 附录分离 + MD 文件强制落盘 + 模式输出标识（演讲/研报/评论） | 2026-07-09
 > 能力层：108 篇文章 / 8 模型 / 15 启发式 / 7 反模式 / 5 维度 18 条盲点
 > 操作层：GAOBO 五步 + D_fetch 数据中间层 + 7 类数据处理规范 + 3 档输出格式 + 7 主题分析模块 + 复盘机制
 > 表达层：14 条规则 + 3 种模式参数 + 锋利押注 + 代际关怀
@@ -850,3 +849,7 @@ D_fetch 跑完后，逐一检视以下缺口类型：
 > 参见 `references/nbs-api-map.md` — NBS API 指标映射表（cid/iid/unit）
 > 参见 `references/data-collection-china.md` — GFW 环境下数据采集可用路径与官方源速查
 > 参见 `references/macroview-club-api.md` — macroview.club 数据接口逆向（游客白名单、API 格式、访问控制矩阵）
+> 参见 `references/gfw-web-limitations.md` — GFW 环境下 web_search/web_extract 工具可达性矩阵与穷尽策略
+> 参见 `references/minimax-pdf-cjk-workaround.md` — minimax-pdf 中文正文乱码修复方案（CJK 字体注入分步命令）
+> 参见 `references/minimax-pdf-cjk-workaround.md` — minimax-pdf 生成中文 PDF 正文乱码的 CJK 字体注入方案
+> 参见 `references/firecrawl-loop.md` — Firecrawl keyless 作为 Loop 搜索的验证方案（年轻人话题实测通过）
