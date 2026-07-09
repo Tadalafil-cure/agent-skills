@@ -1,0 +1,370 @@
+{
+  "PMI": [
+    {
+      "release_date": "20260630",
+      "text": "2026年6月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202606/t20260630_1964032.html"
+    },
+    {
+      "release_date": "20260531",
+      "text": "2026年5月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260531_1963824.html"
+    },
+    {
+      "release_date": "20260430",
+      "text": "2026年4月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260430_1963473.html"
+    },
+    {
+      "release_date": "20260331",
+      "text": "2026年3月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260331_1962889.html"
+    },
+    {
+      "release_date": "20260304",
+      "text": "2026年2月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260304_1962699.html"
+    },
+    {
+      "release_date": "20260131",
+      "text": "2026年1月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260131_1962416.html"
+    },
+    {
+      "release_date": "20251231",
+      "text": "2025年12月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251231_1962218.html"
+    },
+    {
+      "release_date": "20251130",
+      "text": "2025年11月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202511/t20251130_1961945.html"
+    },
+    {
+      "release_date": "20251031",
+      "text": "2025年10月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251031_1961740.html"
+    },
+    {
+      "release_date": "20250930",
+      "text": "2025年9月中国采购经理指数运行情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202509/t20250930_1961438.html"
+    }
+  ],
+  "工业增加值": [
+    {
+      "release_date": "20260616",
+      "text": "2026年5月份规模以上工业增加值增长4.5%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202606/t20260616_1963953.html"
+    },
+    {
+      "release_date": "20260518",
+      "text": "2026年1—4月份规模以上工业增加值增长5.6%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260518_1963731.html"
+    },
+    {
+      "release_date": "20260416",
+      "text": "2026年3月份规模以上工业增加值增长5.7%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260416_1963329.html"
+    },
+    {
+      "release_date": "20260316",
+      "text": "2026年1—2月份规模以上工业增加值增长6.3%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260316_1962782.html"
+    },
+    {
+      "release_date": "20260119",
+      "text": "2025年12月份规模以上工业增加值增长5.2%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962329.html"
+    },
+    {
+      "release_date": "20251215",
+      "text": "2025年11月份规模以上工业增加值增长4.8%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251215_1962074.html"
+    },
+    {
+      "release_date": "20251114",
+      "text": "2025年10月份规模以上工业增加值增长4.9%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202511/t20251114_1961856.html"
+    },
+    {
+      "release_date": "20251020",
+      "text": "2025年9月份规模以上工业增加值增长6.5%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251020_1961611.html"
+    }
+  ],
+  "固投": [
+    {
+      "release_date": "20260616",
+      "text": "2026年1—5月份全国固定资产投资基本情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202606/t20260616_1963951.html"
+    },
+    {
+      "release_date": "20260518",
+      "text": "2026年1—4月份全国固定资产投资基本情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260518_1963730.html"
+    },
+    {
+      "release_date": "20260416",
+      "text": "2026年1—3月份全国固定资产投资增长1.7%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260416_1963328.html"
+    },
+    {
+      "release_date": "20260316",
+      "text": "2026年1—2月份全国固定资产投资同比增长1.8%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260316_1962784.html"
+    },
+    {
+      "release_date": "20260119",
+      "text": "2025年全国固定资产投资基本情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962326.html"
+    },
+    {
+      "release_date": "20251215",
+      "text": "2025年1—11月份全国固定资产投资基本情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251215_1962073.html"
+    },
+    {
+      "release_date": "20251114",
+      "text": "2025年1—10月份全国固定资产投资基本情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202511/t20251114_1961854.html"
+    },
+    {
+      "release_date": "20251020",
+      "text": "2025年1—9月份全国固定资产投资基本情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251020_1961610.html"
+    }
+  ],
+  "社零": [
+    {
+      "release_date": "20260616",
+      "text": "2026年1—5月份社会消费品零售总额增长1.4%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202606/t20260616_1963949.html"
+    },
+    {
+      "release_date": "20260518",
+      "text": "2026年1—4月份社会消费品零售总额增长1.9%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260518_1963727.html"
+    },
+    {
+      "release_date": "20260416",
+      "text": "2026年3月份社会消费品零售总额增长1.7%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260416_1963325.html"
+    },
+    {
+      "release_date": "20260316",
+      "text": "2026年1—2月份社会消费品零售总额增长2.8%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260316_1962786.html"
+    },
+    {
+      "release_date": "20260119",
+      "text": "2025年12月份社会消费品零售总额增长0.9%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962323.html"
+    },
+    {
+      "release_date": "20251215",
+      "text": "2025年11月份社会消费品零售总额增长1.3%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251215_1962071.html"
+    },
+    {
+      "release_date": "20251114",
+      "text": "2025年10月份社会消费品零售总额增长2.9%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202511/t20251114_1961852.html"
+    },
+    {
+      "release_date": "20251020",
+      "text": "2025年9月份社会消费品零售总额增长3.0%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251020_1961606.html"
+    }
+  ],
+  "房地产": [
+    {
+      "release_date": "20260616",
+      "text": "2026年5月份70个大中城市商品住宅销售价格变动情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202606/t20260616_1963946.html"
+    },
+    {
+      "release_date": "20260518",
+      "text": "2026年4月份70个大中城市商品住宅销售价格变动情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260518_1963715.html"
+    },
+    {
+      "release_date": "20260416",
+      "text": "2026年3月份70个大中城市商品住宅销售价格变动情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260416_1963320.html"
+    },
+    {
+      "release_date": "20260316",
+      "text": "2026年2月份70个大中城市商品住宅销售价格变动情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260316_1962774.html"
+    },
+    {
+      "release_date": "20260213",
+      "text": "2026年1月份70个大中城市商品住宅销售价格变动情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202602/t20260213_1962617.html"
+    },
+    {
+      "release_date": "20260119",
+      "text": "2025年12月份70个大中城市商品住宅销售价格变动情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962319.html"
+    },
+    {
+      "release_date": "20251215",
+      "text": "2025年11月份70个大中城市商品住宅销售价格变动情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251215_1962069.html"
+    },
+    {
+      "release_date": "20251114",
+      "text": "2025年10月份70个大中城市商品住宅销售价格变动情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202511/t20251114_1961850.html"
+    },
+    {
+      "release_date": "20251020",
+      "text": "2025年9月份70个大中城市商品住宅销售价格变动情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251020_1961597.html"
+    }
+  ],
+  "CPI": [
+    {
+      "release_date": "20260610",
+      "text": "2026年5月份居民消费价格同比上涨1.2%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202606/t20260610_1963923.html"
+    },
+    {
+      "release_date": "20260511",
+      "text": "2026年4月份居民消费价格同比上涨1.2%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260511_1963659.html"
+    },
+    {
+      "release_date": "20260410",
+      "text": "2026年3月份居民消费价格同比上涨1.0%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260410_1963264.html"
+    },
+    {
+      "release_date": "20260309",
+      "text": "2026年2月份居民消费价格同比上涨1.3%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260309_1962732.html"
+    },
+    {
+      "release_date": "20260211",
+      "text": "2026年1月份居民消费价格同比上涨0.2%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202602/t20260211_1962588.html"
+    },
+    {
+      "release_date": "20260109",
+      "text": "2025年12月份居民消费价格同比上涨0.8%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260109_1962273.html"
+    },
+    {
+      "release_date": "20251210",
+      "text": "2025年11月份居民消费价格同比上涨0.7%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251210_1962015.html"
+    },
+    {
+      "release_date": "20251109",
+      "text": "2025年10月份居民消费价格同比上涨0.2%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202511/t20251109_1961826.html"
+    },
+    {
+      "release_date": "20251015",
+      "text": "2025年9月份居民消费价格同比下降0.3% 环比上涨0.1%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251015_1961521.html"
+    }
+  ],
+  "PPI": [
+    {
+      "release_date": "20260610",
+      "text": "2026年5月份工业生产者出厂价格同比上涨3.9% 环比上涨0.5%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202606/t20260610_1963922.html"
+    },
+    {
+      "release_date": "20260511",
+      "text": "2026年4月份工业生产者出厂价格同比上涨2.8% 环比上涨1.7%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260511_1963658.html"
+    },
+    {
+      "release_date": "20260410",
+      "text": "2026年3月份工业生产者出厂价格同比由降转涨 环比涨幅扩大",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260410_1963263.html"
+    },
+    {
+      "release_date": "20260309",
+      "text": "2026年2月份工业生产者出厂价格同比降幅收窄 环比继续上涨",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260309_1962729.html"
+    },
+    {
+      "release_date": "20260211",
+      "text": "2026年1月份工业生产者出厂价格同比降幅收窄 环比涨幅扩大",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202602/t20260211_1962587.html"
+    },
+    {
+      "release_date": "20260109",
+      "text": "2025年12月份工业生产者出厂价格同比降幅收窄 环比涨幅扩大",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260109_1962272.html"
+    },
+    {
+      "release_date": "20251210",
+      "text": "2025年11月份工业生产者出厂价格环比继续上涨",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251210_1962014.html"
+    },
+    {
+      "release_date": "20251109",
+      "text": "2025年10月份工业生产者出厂价格同比降幅继续收窄 环比由平转涨",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202511/t20251109_1961822.html"
+    },
+    {
+      "release_date": "20251015",
+      "text": "2025年9月份工业生产者出厂价格同比降幅继续收窄",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251015_1961520.html"
+    }
+  ],
+  "失业率": [
+    {
+      "release_date": "20260515",
+      "text": "2025年城镇单位就业人员年平均工资情况",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260515_1963707.html"
+    }
+  ],
+  "GDP": [
+    {
+      "release_date": "20260417",
+      "text": "2026年一季度国内生产总值初步核算结果",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260417_1963336.html"
+    },
+    {
+      "release_date": "20260120",
+      "text": "2025年四季度和全年国内生产总值初步核算结果",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260120_1962349.html"
+    },
+    {
+      "release_date": "20251230",
+      "text": "2024年全国农业及相关产业增加值占GDP比重为15.29%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251230_1962181.html"
+    },
+    {
+      "release_date": "20251230",
+      "text": "2024年全国旅游及相关产业增加值占GDP比重为4.35%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251230_1962180.html"
+    },
+    {
+      "release_date": "20251230",
+      "text": "2024年全国文化及相关产业增加值占GDP比重为4.61%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251230_1962179.html"
+    },
+    {
+      "release_date": "20251230",
+      "text": "2024年全国数字经济核心产业增加值占GDP比重为10.5%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251230_1962177.html"
+    },
+    {
+      "release_date": "20251226",
+      "text": "国家统计局关于2024年国内生产总值最终核实的公告",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251226_1962144.html"
+    },
+    {
+      "release_date": "20251021",
+      "text": "2025年三季度国内生产总值初步核算结果",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251021_1961646.html"
+    }
+  ]
+}
