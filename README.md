@@ -6,6 +6,7 @@ A curated collection of installable skill protocols for AI agents — self-conta
 
 | Skill | Description |
 |-------|-------------|
+| [XuXiaoming-StockTradingStrategy](./XuXiaoming-StockTradingStrategy/) | 徐小明技术分析策略 v4.4.5 — 四层架构（能力层/表达层/规则层/工具接入层），蒸馏自「投资明见」2019-2026 2124篇文章。7组规则全量原文支撑，默认6指标实现（三合一/CHOP/MACD结构/九转/分钟线/五指数共振），裁决出口仅5种（持股/试探/观望/空仓/减仓）。工具接入层框架无关，用户可替换任意指标。封板测试393篇一致率64.1%。独立数据中间层（akshare→build.py一键构建） |
 | [gaoshanwen-methodology](./gaoshanwen-methodology/) | 高善文·宏观分析思维方法论 v5.12 — 三层架构（能力层/操作层/表达层），D_fetch 数据中间层（23指标/三源合一），GAOBO 两遍制 + Loop 动态缺口清单（至多3轮）+ 重检强制 Checklist + 流水线规则，三种输出模式（演讲/研报/评论），正文/附录分离，比喻工具箱，历史案例库，跨国比较框架 |
 | [Holographic Enhanced Memory Protocol](./holographic-enhanced-memory-protocol/) | **Mechanically enhanced edition** of Hermes-Agent's native holographic memory plugin. **Five core enhancements:** ① system-level enforced memory hooks (write/session/startup triple-anchor, agent cannot bypass) ② hot/warm/cold gradient memory system with tiered sinking and use-it-or-lose-it pruning ③ TF-IDF semantic retrieval replacing FTS5 keyword search (Chinese-aware tokenization, zero API calls) ④ radical lightness — all mechanical operations are code-driven, no new services or dependencies ⑤ L0/DB decoupling + comprehensive database lock fix (v2.5.2) — WAL pragma tuning, 10-retry backoff, clean checkpoint close, incremental embedding backfill. Hot layer operates independently of warm layer. Log-confirmed: 0 lock errors post-deploy. |
 
