@@ -705,6 +705,7 @@ data/minute_structure_v2_{sh,sz}.csv ← 分钟线结构(需分钟线数据)
 | `scripts/blog_monitor.py` | **博客对照**：查询+抓取徐小明操作策略文章（日期偏移+三重校验+正文提取） | 终端输出 |
 | `scripts/full_validation.py` | 全管线交叉验证 | — |
 | `data_layer/breadth.py` | **广度引擎 v1**：NH/NL双公式 + 四阶段判定 | `data/breadth_daily.csv` + 结构化 JSON |
+| `data_layer/loader.py` | **数据加载器 v1**：统一读取接口，长/宽格式透明，列名校验内置。`get_structures()`/`get_verdict()`/`get_breadth()`/`annual_structure_table()` | DataFrame（宽格式） |
 
 ### 全管线交叉验证（2026-07-11）
 

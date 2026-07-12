@@ -10,32 +10,21 @@
 
 > **输出报告前必须执行以下校验，违者按 A17 反模式处理。**
 
-### 步骤 0：校验数据源列名
+### 步骤 0：加载数据（使用 loader，格式透明）
 
 ```python
-import pandas as pd
+from data_layer.loader import get_structures, get_verdict, get_breadth, annual_structure_table
 
-# 1. 裁决数据（宽格式，列名固定）
-v = pd.read_csv("data/verdict_v7.csv")
-assert "bs_sh" in v.columns, "verdict_v7.csv 缺少 bs_sh 列！"
-required = ["bs_sh","bs_sz","bs_cyb","bs_kc","ts_sh","ts_sz","ts_cyb","ts_kc",
-            "verdict_main","verdict_tech","resonance","close_sh","regime_sh","chop_sh"]
-for col in required:
-    assert col in v.columns, f"verdict_v7.csv 缺少列: {col}"
+# 三行加载全部数据——列名校验内置，格式差异已处理
+v = get_verdict()       # 宽格式，bs_sh/ts_sh 等列已校验
+s = get_structures()    # 始终返回宽格式，无论底层是长/宽格式
+b = get_breadth()       # NH/NL 广度数据
 
-# 2. 结构信号（长格式！列名不同！）
-s = pd.read_csv("data/structure_signals.csv")
-assert "index_name" in s.columns, "structure_signals.csv 缺少 index_name 列"
-assert "bottom_structure" in s.columns, "structure_signals.csv 缺少 bottom_structure 列"
-# ⚠️ 此文件是长格式——必须按 index_name 筛选，不能直接用 bs_sh/ts_sh
-
-# 3. 按指数提取结构（正确做法）
-for idx_name, idx_code in [("上证指数","sh"),("深证成指","sz"),("创业板指","cyb"),("科创50","kc")]:
-    sub = s[s["index_name"] == idx_name]
-    bs_count = sub["bottom_structure"].sum()
-    ts_count = sub["top_structure"].sum()
-    print(f"  {idx_code}: 底{bs_count}次 顶{ts_count}次")
+# 年内结构全景表（直接嵌入报告）
+print(annual_structure_table())
 ```
+
+> **禁止直接 `pd.read_csv("structure_signals.csv")` 后手工查列——此文件是长格式，容易和 verdict_v7.csv 的宽格式混淆，导致 A17 反模式。一律走 `loader`。**
 
 ### 步骤 1：统计年内结构全景（强制输出项）
 
