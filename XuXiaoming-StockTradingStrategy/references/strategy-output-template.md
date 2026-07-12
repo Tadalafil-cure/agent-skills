@@ -1,8 +1,52 @@
-# 操作策略输出模板 v1.5
+# 操作策略输出模板 v1.6
 
 > **架构：双 Agent 并行 → 跨市场合成。** 主板（上证+深证）和科技（创业板+科创50）各由一个独立子 agent 按徐小明方法论做全链路推演，父 agent 做跨市场交叉验证和分歧裁决。
 > 分析前必须加载最新引擎数据：verdict_v7.csv + 日线 OHLC + 结构信号 + 九转序列。
 > **字数要求：单 agent 分析≥1000 字，合成报告≥1500 字，全量≥4000 字（原 1.5x）。**
+
+---
+
+## 强制前置：数据读取校验（v1.6 新增，不可跳过）
+
+> **输出报告前必须执行以下校验，违者按 A17 反模式处理。**
+
+### 步骤 0：校验数据源列名
+
+```python
+import pandas as pd
+
+# 1. 裁决数据（宽格式，列名固定）
+v = pd.read_csv("data/verdict_v7.csv")
+assert "bs_sh" in v.columns, "verdict_v7.csv 缺少 bs_sh 列！"
+required = ["bs_sh","bs_sz","bs_cyb","bs_kc","ts_sh","ts_sz","ts_cyb","ts_kc",
+            "verdict_main","verdict_tech","resonance","close_sh","regime_sh","chop_sh"]
+for col in required:
+    assert col in v.columns, f"verdict_v7.csv 缺少列: {col}"
+
+# 2. 结构信号（长格式！列名不同！）
+s = pd.read_csv("data/structure_signals.csv")
+assert "index_name" in s.columns, "structure_signals.csv 缺少 index_name 列"
+assert "bottom_structure" in s.columns, "structure_signals.csv 缺少 bottom_structure 列"
+# ⚠️ 此文件是长格式——必须按 index_name 筛选，不能直接用 bs_sh/ts_sh
+
+# 3. 按指数提取结构（正确做法）
+for idx_name, idx_code in [("上证指数","sh"),("深证成指","sz"),("创业板指","cyb"),("科创50","kc")]:
+    sub = s[s["index_name"] == idx_name]
+    bs_count = sub["bottom_structure"].sum()
+    ts_count = sub["top_structure"].sum()
+    print(f"  {idx_code}: 底{bs_count}次 顶{ts_count}次")
+```
+
+### 步骤 1：统计年内结构全景（强制输出项）
+
+报告第一节必须包含四指数年内顶/底结构次数表。此数据决定后续所有分析基调——**缺失此表或数据错误将导致整篇报告无效。**
+
+| 指数 | 底结构次数 | 顶结构次数 | 最后一次顶结构 | 最后一次底结构 |
+|------|:--:|:--:|------|------|
+| 上证 | X | X | YYYY-MM-DD | YYYY-MM-DD |
+| 深证 | X | X | ... | ... |
+| 创业板 | X | X | ... | ... |
+| 科创50 | X | X | ... | ... |
 
 ---
 
@@ -188,8 +232,8 @@
 
 ---
 
-> 模板版本：v1.5 | 2026-07-14（双Agent架构 + 1.5x字数）
-> 配套技能：XuXiaoming-StockTradingStrategy v4.5.1
+> 模板版本：v1.6 | 2026-07-14（新增强制数据校验步骤 + A17 反模式）
+> 配套技能：XuXiaoming-StockTradingStrategy v4.5.3
 
 ---
 
