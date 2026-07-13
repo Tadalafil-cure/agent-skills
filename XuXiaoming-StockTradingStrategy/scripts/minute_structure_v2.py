@@ -23,6 +23,8 @@ OUT_DIR = Path(__file__).resolve().parent.parent / "data"
 INDEX_MAP = {
     "sh": ("sh000001", "上证指数"),
     "sz": ("sz399001", "深证成指"),
+    "cyb": ("sz399006", "创业板指"),
+    "kc": ("sh000688", "科创50"),
 }
 
 PERIODS = [60, 90, 120]
@@ -216,7 +218,7 @@ def main(data_dir: str = None):
     if data_dir:
         DATA_DIR = Path(data_dir)
 
-    for idx in ["sh", "sz"]:
+    for idx in INDEX_MAP:
         code, name = INDEX_MAP[idx]
         print(f"\n{'='*60}")
         print(f"分钟线结构修边引擎 v2 · {name}")

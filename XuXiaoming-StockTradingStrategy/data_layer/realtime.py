@@ -157,11 +157,10 @@ def get_spot() -> dict:
 def ensure_verdict_fresh():
     """确保 verdict_v7.csv 包含前一交易日数据，无则自动跑裁决引擎。
     
-    这是「盘中继前日」的核心保证——用户说"假定没有前次报告"时，
-    此函数会自动补跑引擎，让盘中简报有昨日裁决可接续。
+    注意：此函数只保证 CSV 数据就绪，不负责生成前日完整报告。
+    前日完整报告由 Agent 在触发盘中前检测并生成（有则复用，无则补跑全流程）。
     
-    但注意：此函数只保证 CSV 数据就绪，不负责生成前日完整报告（八段 markdown）。
-    前日报告由 Agent 在触发盘中前单独生成（有则复用，无则补跑全流程）。
+    补跑全流程 ≠ 只跑 verdict_v7.py → 必须走两路并行Agent+合成+博客后置。
     """
     verdict_path = DATA / "verdict_v7.csv"
     prev_day = get_previous_trading_day()
@@ -185,6 +184,44 @@ def ensure_verdict_fresh():
         )
         if result.returncode != 0:
             raise RuntimeError(f"裁决引擎运行失败:\n{result.stderr}")
+
+
+def find_previous_report(ref_date: date = None) -> Path | None:
+    """查找前一次易日的完整报告文件。
+    
+    搜索 ~/reports/ 目录，匹配文件名中的日期前缀。
+    例如找 2026-07-10 的报告 → 匹配 '2026-07-10_' 开头的 .md 文件。
+    
+    返回最新匹配文件的 Path，无匹配返回 None。
+    """
+    if ref_date is None:
+        ref_date = get_previous_trading_day()
+    date_prefix = ref_date.strftime("%Y-%m-%d_")
+    
+    reports_dir = Path.home() / "reports"
+    if not reports_dir.exists():
+        return None
+    
+    matches = sorted(
+        [f for f in reports_dir.glob(f"{date_prefix}*.md")],
+        key=lambda f: f.stat().st_mtime,
+        reverse=True
+    )
+    return matches[0] if matches else None
+
+
+def ensure_previous_report_exists() -> Path | None:
+    """检查前日完整报告是否存在。存在返回路径，不存在返回 None。
+    
+    返回 None 时，调用方（Agent）必须补跑全流程：
+    ① delegate_task 两路并行 → ② 主Agent合成 → ③ 博客后置 → ④ 输出MD文件。
+    不可走捷径——不能只跑 verdict_v7.py 或单 Agent 手写。
+    """
+    prev_day = get_previous_trading_day()
+    report_path = find_previous_report(prev_day)
+    if report_path:
+        return report_path
+    return None
 
 
 def get_yesterday_verdict() -> dict:
@@ -405,7 +442,10 @@ def check_minute_structure(fetch_today: bool = True) -> dict:
     
     # 读取已生成的 CSV
     result = {}
-    for idx_code, idx_name in [("sh", "上证指数"), ("sz", "深证成指")]:
+    for idx_code, idx_name in [
+        ("sh", "上证指数"), ("sz", "深证成指"),
+        ("cyb", "创业板指"), ("kc", "科创50")
+    ]:
         csv_path = DATA / f"minute_structure_v2_{idx_code}.csv"
         if csv_path.exists():
             df = pd.read_csv(csv_path)
@@ -453,8 +493,9 @@ def generate_briefing(spot: dict, yesterday: dict, chop_est: dict,
     prev_date = yesterday["date"]
     
     lines = []
-    lines.append(f"# 盘中裁决简报")
-    lines.append(f"**{now.strftime('%Y-%m-%d %H:%M')}** | 市场状态：**{status}** | 接续：{prev_date} 裁决")
+    lines.append("# 盘中裁决简报")
+    weekday_cn = ["周一","周二","周三","周四","周五","周六","周日"][now.weekday()]
+    lines.append(f"**{now.strftime('%Y-%m-%d')} {weekday_cn} {now.strftime('%H:%M')}** | 市场状态：**{status}** | 接续：{prev_date} 裁决")
     lines.append("")
     
     # ── 一、实时行情 ──
