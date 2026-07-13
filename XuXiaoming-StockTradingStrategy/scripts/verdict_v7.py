@@ -397,7 +397,11 @@ def verdict_single(indicators, rows, resonance, seq_data):
                 elif in_week: tag = tag.replace('试探','持股')+'+周低9'; rsn += '+周低9'
                 verdict = tag; reason = rsn
             elif ts_today or ts_recent:
-                verdict = '空仓'; reason = '震荡+顶结构→空仓'
+                # v4.6.1: 顶结构含义取决于来路
+                if osc_origin == '下行':
+                    verdict = '试探'; reason = '震荡(来路下行)+顶结构→等突破'
+                else:
+                    verdict = '空仓'; reason = '震荡(来路上行)+顶结构→空仓'
             elif chop_falling and bullish:
                 verdict = '试探'; reason = 'CHOP收敛+方向转正→等突破'
                 if strong_bull: verdict = '持股'; reason += '+强共振上升'
