@@ -209,12 +209,35 @@ def compute_cyb_kc_resonance(indicators_cyb, indicators_kc):
 # 4. 单指数裁决
 # ============================================================
 def chop_level(c):
+    """CHOP 三级分档（非对称滞回设计）
+    
+    CHOP > 61.8 (chaotic): 单日即切→震荡。
+        回测依据(2021-2026, 科创50 1329天):
+        - 18个>61.8簇，36.7%为单日尖刺
+        - 滞回(N=2/N=3)拖后腿: 延迟18天多亏+16.10%
+        - 即时切换 Sharpe=0.31 vs 滞回=0.22
+        - 原因: 上穿61.8是真正的恐慌/分歧爆发, 即使次日回落当天也真跌
+        
+    CHOP < 38.2 (clear): ≥3天持续确认才有效。
+        回测依据(同数据源):
+        - 94%单日跌破38.2为假收敛(触及即弹回)
+        - ≥3天持续<38.2: 10次信号 20日胜率70% +2.1%
+        - ≥1天: 胜率仅58% +1.1%, 噪声主导
+        
+    两条线的不对称不是bug——上穿是真信号多假信号少, 下穿是假信号多真信号少。
+    """
     if c is None: return 'unknown'
     if c < 38.2: return 'clear'
     if c <= 61.8: return 'fuzzy'
     return 'chaotic'
 
 def is_trending(regime, cl):
+    """趋势判定: CHOP>61.8(chaotic)→直接否趋势, 无滞回, 单日即切。
+    
+    这与 CHOP<38.2 的 ≥3天滞回形成非对称设计:
+    - 上穿61.8: 即时切换 (真信号多, 滞回代价大)
+    - 下穿38.2: ≥3天确认 (假信号多, 需持续验证)
+    """
     if cl == 'chaotic': return False
     if regime in ('上行趋势', '偏多', '下行趋势', '偏空'): return True
     return False
@@ -415,14 +438,18 @@ def verdict_single(indicators, rows, resonance, seq_data):
                 verdict = '观望(偏多)'; reason = '震荡+低9'
             else:
                 # v4.6.1: 震荡来路判断（H17）
+                # v4.6.2: CHOP>61.8 硬切换明确标注——不是"趋势降级"是策略翻牌
                 if osc_origin == '上行':
                     verdict = '观望(偏多)'; reason = '震荡，来路上行→偏多'
                 elif osc_origin == '下行':
                     verdict = '观望'; reason = '震荡，来路下行→观望'
                 else:
                     verdict = '观望'; reason = '震荡'
+                # CHOP原因标注
+                if c is not None and c > 61.8:
+                    reason += f' | CHOP={c:.0f}>61.8硬切换(趋势→震荡)'
                 # CHOP<38.2 单日关注（不触发操作，仅标注）
-                if chop_below_38 and not chop_sustained_clear:
+                elif chop_below_38 and not chop_sustained_clear:
                     reason += ' | CHOP<38.2关注'
 
         results[i] = {
@@ -502,6 +529,7 @@ def main():
             'month_win', 'week_win',
             'osc_origin_sz', 'osc_origin_sh',
             'verdict_sz', 'verdict_sh', 'verdict_cyb', 'verdict_kc',
+            'reason_sz', 'reason_sh', 'reason_cyb', 'reason_kc',
             'verdict_main', 'verdict_tech', 'reason'
         ]
         w.writerow(headers)
@@ -567,6 +595,7 @@ def main():
                 mw, ww,
                 oo_sz, oo_sh,
                 v_sz, v_sh, v_cyb, v_kc,
+                vf(row_sz, 'reason'), vf(row_sh, 'reason'), vf(row_cyb, 'reason'), vf(row_kc, 'reason'),
                 v_main, v_tech, rsn,
             ])
 
