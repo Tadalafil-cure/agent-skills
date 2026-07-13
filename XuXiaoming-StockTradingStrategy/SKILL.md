@@ -13,9 +13,8 @@ description: >
 # 徐小明技术分析思想
 
 > 蒸馏自「投资明见」公众号 2019.01–2026.07，2124篇文章（42篇长文 + 2082篇短文/午评）
-- 引擎：mind-distill v3.8（能力层）+ nuwa（表达层）+ verdict v4.6.11（规则层+工具接入层+分钟线修边+数据中间层）
-- 版本：v4.6.11 | 2026-07-13（裁决引擎重写：共振驱动主板/科技裁决，单指数裁决不冒充共振共识；分钟线切极值法20d，bd/td分离；钝化不入裁决，纯分析层；日线bd列入verdict_v7.csv）
-- 操作策略输出：必须遵循 `references/strategy-output-template.md`（v1.9）九节结构。强制走全流程：两路并行→主Agent合成→博客后置追加。模板含强制检查清单（十项全部通过才算交付）。
+- 引擎：mind-distill v3.8（能力层）+ nuwa（表达层）+ verdict v4.6.12（规则层+工具接入层+分钟线修边+数据中间层）\n- 版本：v4.6.12 | 2026-07-13（v4.6.11基础 + 震荡来路判断强制入模板：来路决定规则——上行看出口方向，下行看BS累计次数。基本原则与「震荡中顶结构不重要」同级）\n- 操作策略输出：必须遵循 `references/strategy-output-template.md`（v1.11）九节结构。强制走全流程：单Agent统稿+震荡来路判断+五指数投票明细+博客后置追加。模板含强制检查清单（十一项全部通过才算交付）。
+- 钝化分析层：`references/divergence-backtest-v4611.md` — 极值法20d回测结论（日线88-95%转化，分钟线顶钝化89-98%可靠，底钝化需结合日线）。钝化不入裁决，仅分析层。
 
 ---
 
@@ -1462,6 +1461,7 @@ v4 使用了**外来指标**（前 N 日最高/最低 Donchian channel + ATR 滚
 > 盲测v6-2024：`references/blind-test-v6-2023-2024.md` — v6引擎2023-2024比对 + 正则提取局限 + 2024首超v5
 > 差异：`references/model-vs-xuxiaoming-divergence.md` — 7项系统差异 + 处理方式（震荡方向/分钟线独立/结构是过程/序列独立/趋势确认/顶部结构/3000点锚）
 > 盲测v7-2020-2022：`references/blind-test-v7-2020-2022.md` — v7引擎2020-2022 LLM比对 + 37.8%一致率 + 2022年骤降分析 + 三类系统分歧
+> 钝化回测：`references/divergence-backtest-v4611.md` — v4.6.11 XXM柱状线/极值法20d/40d 日线+分钟线 全量回测 + 钝化簇规律 + 选型结论
 > 附录：`references/original-articles/` — 全部2124篇文章原文（8个年卷）
 > LLM方法：`references/llm-extraction-method.md` — 正则→LLM提取方法论演进
 > 分化演化：`references/divergence-evolution.md` — 徐小明"分化"工具 2019-2026 演化史（R8 设计依据）

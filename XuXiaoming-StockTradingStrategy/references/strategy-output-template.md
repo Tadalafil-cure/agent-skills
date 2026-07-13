@@ -311,8 +311,7 @@ print(annual_structure_table())
 
 ---
 
-> 模板版本：v1.11 | 2026-07-13（震荡来路判断强制 + 五指数投票明细 + 钝化分析层 + 共振驱动裁决）
-> 配套技能：XuXiaoming-StockTradingStrategy v4.6.11
+> 模板版本：v1.11 | 2026-07-13（震荡来路判断强制 + 五指数投票明细 + 钝化分析层 + 共振驱动裁决）\n> 配套技能：XuXiaoming-StockTradingStrategy v4.6.12
 
 ---
 
