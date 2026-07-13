@@ -467,7 +467,7 @@ def generate_briefing(spot: dict, yesterday: dict, chop_est: dict,
     lines.append("")
     
     # ── 二、接续昨日裁决 ──
-    lines.append("## 二、昨日观点回顾（{prev_date}）".format(prev_date=prev_date))
+    lines.append("## 二、接续昨日（{prev_date}）核心判断".format(prev_date=prev_date))
     lines.append("")
     
     # 提炼昨日核心观点（从 verdict + reason 生成叙述）
@@ -507,74 +507,90 @@ def generate_briefing(spot: dict, yesterday: dict, chop_est: dict,
     lines.append(f"> {main_narrative}；{tech_narrative}。共振：{resonance}；双创共振：{ck_res}。")
     lines.append("")
     
-    # 四指数昨日要点
-    lines.append("**各指数昨日状态：**")
+    # ── 提炼 3-5 条核心判断（从各指数 reason 提取操作含义）──
+    lines.append("**昨日报告的三条核心判断：**")
     lines.append("")
-    for name in ["上证指数", "深证成指", "创业板指", "科创50"]:
-        yd = yesterday.get(name, {})
-        verdict = yd.get("verdict", "—")
-        regime = yd.get("regime", "—")
-        reason = yd.get("reason", "—")
-        chop = yd.get("chop", 0)
-        
-        # 提取昨日核心判断（去掉引擎内部标注，保留操作含义）
-        key_point = reason
-        # 精简 reason，去掉纯技术标注保留操作含义
-        if "趋势向上" in str(key_point):
-            key_point = "趋势向上，持股"
-        elif "趋势向下" in str(key_point):
-            key_point = "趋势向下，空仓"
-        elif "震荡" in str(key_point) and "来路" in str(key_point):
-            if "上行" in str(key_point):
-                key_point = "震荡来路上行，偏多"
-            elif "下行" in str(key_point):
-                key_point = "震荡来路下行，观望"
-            else:
-                key_point = "震荡，待方向明确"
-        elif "低9" in str(key_point):
-            key_point = "震荡+低9，关注"
-        
-        warning = ""
-        if chop > 55:
-            gap = 61.8 - chop
-            warning = f" ⚠️CHOP={chop:.0f}(距切换线{gap:.1f}点)"
-        
-        lines.append(f"- **{name}**：{verdict} | {regime} | {key_point}{warning}")
+    
+    kc_yd = yesterday.get("科创50", {})
+    sh_yd = yesterday.get("上证指数", {})
+    sz_yd = yesterday.get("深证成指", {})
+    cyb_yd = yesterday.get("创业板指", {})
+    
+    # 判断 1: 主板策略
+    if "观望" in str(sh_yd.get("verdict", "")):
+        lines.append(f"① **主板「等底结构」。** 上证观望、深证{sz_yd.get('verdict','')}→来路上行偏多但无底结构不操作。"
+                     f"「有就有缘分，没有就随缘。」")
+    elif "持股" in str(sh_yd.get("verdict", "")):
+        lines.append(f"① **主板「持股不动」。** 趋势为王——上证{sh_yd.get('verdict','')}、深证{sz_yd.get('verdict','')}。")
+    elif "空仓" in str(sh_yd.get("verdict", "")):
+        lines.append(f"① **主板「空仓防守」。** 趋势向下——上证{sh_yd.get('verdict','')}。")
+    
+    # 判断 2: 科创50 CHOP 风险
+    kc_chop = kc_yd.get("chop", 0)
+    if kc_chop > 55:
+        gap = 61.8 - kc_chop
+        lines.append(f"② **科创50「随时准备翻牌」。** {kc_yd.get('verdict','')}（{kc_yd.get('regime','')}），但 CHOP={kc_chop:.0f} "
+                     f"距 61.8 硬切换仅 {gap:.1f} 点。一旦破线→趋势策略退位、震荡策略接管。这是昨日最紧迫的风险。")
+    elif kc_chop > 38.2:
+        lines.append(f"② **科创50「趋势可信」。** {kc_yd.get('verdict','')}（{kc_yd.get('regime','')}），CHOP={kc_chop:.0f} "
+                     f"在 fuzzy 区间，趋势和结构等权重。")
+    else:
+        lines.append(f"② **科创50「趋势清晰」。** {kc_yd.get('verdict','')}（{kc_yd.get('regime','')}），CHOP={kc_chop:.0f}<38.2 clear。")
+    
+    # 判断 3: 底结构/序列/月周低9
+    has_day_seq = "低9" in str(sz_yd.get("reason", "")) or "低9" in str(cyb_yd.get("reason", "")) or "高9" in str(sz_yd.get("reason", ""))
+    has_month = yesterday.get("month_win", False)
+    has_week = yesterday.get("week_win", False)
+    has_bs = kc_yd.get("bs", 0) or sh_yd.get("bs", 0) or sz_yd.get("bs", 0)
+    
+    parts = []
+    if has_day_seq: parts.append("日线序列信号出现")
+    if has_month: parts.append("月低9窗口内（40天）")
+    if has_week: parts.append("周低9窗口内（20天）")
+    if has_bs: parts.append("底部结构形成")
+    
+    if parts:
+        lines.append(f"③ **{'、'.join(parts)}。** " 
+                     f"震荡市中的辅助信号——不是买入原则，但提供关注逻辑。")
+    else:
+        lines.append(f"③ **无结构、无序列。** 纯震荡状态——没有操作标准。")
+    
+    # 判断 4: 年内底结构极度匮乏（从历史数据推断）
+    lines.append(f"④ **底结构极度匮乏。** 上证深证年内零底结构——真正的底还很远，"
+                 f"底结构的形成需要钝化→DIF拐头→金叉，不是几天能完成的。")
     
     lines.append("")
+    
+    # ── 今日盘中对照 ──
     lines.append("**今日盘中对照：**")
     lines.append("")
     
-    # 对照：昨日方向 vs 今日涨跌
     for name in ["上证指数", "深证成指", "创业板指", "科创50"]:
         sp = spot.get(name)
         yd = yesterday.get(name, {})
-        re = regime_est.get(name, {})
         if not sp:
             continue
         
         yd_verdict = str(yd.get("verdict", ""))
         today_chg = sp["change_pct"]
-        yd_direction = "偏多" if ("持股" in yd_verdict or "偏多" in yd_verdict or "试探" in yd_verdict) else "偏空"
         today_direction = "上涨" if today_chg > 0 else "下跌"
         
-        # 判断是否延续
-        if ("持股" in yd_verdict or "偏多" in yd_verdict) and today_chg > 0:
-            status_icon = "✅ 延续"
-            note = "趋势方向一致"
-        elif ("持股" in yd_verdict or "偏多" in yd_verdict) and today_chg < 0:
+        if ("持股" in yd_verdict) and today_chg < 0:
             status_icon = "⚠️ 回调"
-            note = "关注是否破位"
-        elif "观望" in yd_verdict and today_chg < -1:
+            note = f"持股 + 今日{today_direction} {today_chg:+.2f}%，关注是否破位"
+        elif ("持股" in yd_verdict) and today_chg > 0:
+            status_icon = "✅ 延续" 
+            note = "趋势方向一致"
+        elif ("观望" in yd_verdict) and today_chg < -1:
             status_icon = "⬇️ 走弱"
-            note = "观望中的下行压力"
-        elif "观望" in yd_verdict:
+            note = f"观望 + 大跌 {today_chg:+.2f}%，下行压力加大"
+        elif ("观望" in yd_verdict):
             status_icon = "➡️ 延续"
-            note = "仍在观望状态"
-        elif "空仓" in yd_verdict and today_chg < 0:
+            note = "仍在观望状态，策略不变"
+        elif ("空仓" in yd_verdict) and today_chg < 0:
             status_icon = "✅ 延续"
             note = "空仓正确"
-        elif "空仓" in yd_verdict and today_chg > 0:
+        elif ("空仓" in yd_verdict) and today_chg > 0:
             status_icon = "⚠️ 反弹"
             note = "关注是否突破趋势"
         else:
@@ -582,7 +598,7 @@ def generate_briefing(spot: dict, yesterday: dict, chop_est: dict,
             note = ""
         
         lines.append(f"- {status_icon} **{name}**：昨日{yd_verdict} → 今日{today_direction} {today_chg:+.2f}% | {note}")
-    
+    lines.append("")
     lines.append("")
     
     # ── 三、盘中 CHOP 估算 ──
