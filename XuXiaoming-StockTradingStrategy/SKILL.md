@@ -14,7 +14,7 @@ description: >
 
 > 蒸馏自「投资明见」公众号 2019.01–2026.07，2124篇文章（42篇长文 + 2082篇短文/午评）
 - 引擎：mind-distill v3.8（能力层）+ nuwa（表达层）+ verdict v4.4.2（规则层+工具接入层+分钟线修边+数据中间层）
-- 版本：v4.6.2 | 2026-06-25（震荡分支审计完成：移除ts→空仓冲突，CHOP≥3天持续收敛触发试探79%胜率，单日<38.2标注关注。规则层全量对齐引擎实现）
+- 版本：v4.6.3 | 2026-06-25（CHOP非对称滞回：上穿61.8单日即切无滞回(回测Sharpe 0.31)，下穿38.2≥3天确认(94%假收敛)。三段输出55/62硬切换。reason四指数独立列。）
 - 操作策略输出：必须遵循 `references/strategy-output-template.md`（v1.5）九段结构：一~六完整数据版 → 七·总结（徐小明公众号风格）→ 八·极简版（时期三零术语风格，用于与徐小明原文风格级比对）→ 九·博客对照（可选）。强制要求：双Agent并行（主板/科技各一子Agent独立分析→父Agent跨市场合成）、四指数全覆盖、趋势-结构-序列三层交叉验证、总结用时期三极简短句仿公众号风格。
 
 ---
@@ -1320,6 +1320,7 @@ v4 使用了**外来指标**（前 N 日最高/最低 Donchian channel + ATR 滚
 | `scripts/simulate_daily.py` | 逐日前向盲测：验证引擎在无前向偏差下能否正确决策 |
 | `scripts/diagnose_channel_structure.py` | 通道×结构联合诊断：关键时段三层信号叠加 |
 | `scripts/backtest_v5.py` | v5/v6/v7 裁决引擎全量回测 + 前向收益统计 |
+| `scripts/chop_threshold_backtest.py` | **CHOP 阈值滞回回测**：上穿 61.8 vs 下穿 38.2 非对称设计验证 + 单日切换 vs 滞回(N=2/N=3)对比（v4.6.3） |
 | `scripts/sample_articles.py` | 原文盲测抽样：每年30篇 + 文章正文提取 |
 | `scripts/sequence_aftermath.py` | 序列9后效验证：调整完成度 + 趋势推翻分析 |
 | `scripts/sequence_failure_analysis.py` | 序列失败原因：趋势/结构环境对比 |
