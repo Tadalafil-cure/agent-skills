@@ -356,6 +356,9 @@ def verdict_single(indicators, rows, resonance, seq_data):
         recent5 = [ch for ch in chop_hist[-5:] if ch is not None]
         chop_falling = len(recent5) >= 5 and c < sum(recent5)/len(recent5) - 5
 
+        # v4.6.1: CHOP持续<38.2检测（≥5天，取代chop_falling瞬时信号）
+        chop_sustained_clear = len(recent5) >= 5 and all(ch < 38.2 and ch is not None for ch in chop_hist[-5:])
+
         res = res_map.get(d, '混合')
         strong_bull = res == '强共振_上升'
         strong_bear = res == '强共振_下跌'
@@ -398,8 +401,8 @@ def verdict_single(indicators, rows, resonance, seq_data):
                 if in_month: tag = tag.replace('试探','持股')+'+月低9'; rsn += '+月低9'
                 elif in_week: tag = tag.replace('试探','持股')+'+周低9'; rsn += '+周低9'
                 verdict = tag; reason = rsn
-            elif chop_falling and bullish:
-                verdict = '试探'; reason = 'CHOP收敛+方向转正→等突破'
+            elif chop_sustained_clear and bullish:
+                verdict = '试探'; reason = 'CHOP持续<38.2(≥5天)+方向偏多→试探'
                 if strong_bull: verdict = '持股'; reason += '+强共振上升'
             elif day_seq == '高9':
                 verdict = '观望(偏空)'; reason = '震荡+高9'
