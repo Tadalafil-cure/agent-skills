@@ -381,15 +381,122 @@ def generate_briefing(spot: dict, yesterday: dict, chop_est: dict,
     lines.append("")
     
     # ── 二、接续昨日裁决 ──
-    lines.append("## 二、接续昨日（{prev_date}）裁决".format(prev_date=prev_date))
+    lines.append("## 二、昨日观点回顾（{prev_date}）".format(prev_date=prev_date))
     lines.append("")
-    lines.append(f"- **主板**：{yesterday['verdict_main']} | 共振：{yesterday['resonance']}")
-    lines.append(f"- **科技**：{yesterday['verdict_tech']} | 双创共振：{yesterday['cyb_kc_resonance']}")
-    # 四指数详情
+    
+    # 提炼昨日核心观点（从 verdict + reason 生成叙述）
+    v_main = yesterday["verdict_main"]
+    v_tech = yesterday["verdict_tech"]
+    resonance = yesterday["resonance"]
+    ck_res = yesterday["cyb_kc_resonance"]
+    
+    # 主板叙述
+    main_narrative = ""
+    if "持股" in v_main:
+        main_narrative = "主板持仓看多——趋势为王，持股不动"
+    elif "观望(偏多)" in v_main:
+        main_narrative = "主板观望偏多——震荡中来路上行，等底结构确认"
+    elif "观望" in v_main:
+        main_narrative = "主板观望——震荡市多看少动，等信号明确"
+    elif "空仓" in v_main:
+        main_narrative = "主板空仓防守——趋势向下"
+    elif "减仓" in v_main:
+        main_narrative = "主板减仓——顶结构触发防守"
+    else:
+        main_narrative = f"主板{v_main}"
+    
+    # 科技叙述
+    tech_narrative = ""
+    if "持股" in v_tech:
+        tech_narrative = "科技持仓看多"
+    elif "观望" in v_tech:
+        tech_narrative = "科技观望等待"
+    elif "减仓" in v_tech:
+        tech_narrative = "科技减仓防守"
+    elif "空仓" in v_tech:
+        tech_narrative = "科技空仓"
+    else:
+        tech_narrative = f"科技{v_tech}"
+    
+    lines.append(f"> {main_narrative}；{tech_narrative}。共振：{resonance}；双创共振：{ck_res}。")
+    lines.append("")
+    
+    # 四指数昨日要点
+    lines.append("**各指数昨日状态：**")
+    lines.append("")
     for name in ["上证指数", "深证成指", "创业板指", "科创50"]:
         yd = yesterday.get(name, {})
-        chop_str = f"{yd.get('chop', 0):.1f}" if yd.get('chop') else "—"
-        lines.append(f"- **{name}**：{yd.get('verdict', '—')} | {yd.get('regime', '—')} | CHOP={chop_str} | {yd.get('reason', '—')}")
+        verdict = yd.get("verdict", "—")
+        regime = yd.get("regime", "—")
+        reason = yd.get("reason", "—")
+        chop = yd.get("chop", 0)
+        
+        # 提取昨日核心判断（去掉引擎内部标注，保留操作含义）
+        key_point = reason
+        # 精简 reason，去掉纯技术标注保留操作含义
+        if "趋势向上" in str(key_point):
+            key_point = "趋势向上，持股"
+        elif "趋势向下" in str(key_point):
+            key_point = "趋势向下，空仓"
+        elif "震荡" in str(key_point) and "来路" in str(key_point):
+            if "上行" in str(key_point):
+                key_point = "震荡来路上行，偏多"
+            elif "下行" in str(key_point):
+                key_point = "震荡来路下行，观望"
+            else:
+                key_point = "震荡，待方向明确"
+        elif "低9" in str(key_point):
+            key_point = "震荡+低9，关注"
+        
+        warning = ""
+        if chop > 55:
+            gap = 61.8 - chop
+            warning = f" ⚠️CHOP={chop:.0f}(距切换线{gap:.1f}点)"
+        
+        lines.append(f"- **{name}**：{verdict} | {regime} | {key_point}{warning}")
+    
+    lines.append("")
+    lines.append("**今日盘中对照：**")
+    lines.append("")
+    
+    # 对照：昨日方向 vs 今日涨跌
+    for name in ["上证指数", "深证成指", "创业板指", "科创50"]:
+        sp = spot.get(name)
+        yd = yesterday.get(name, {})
+        re = regime_est.get(name, {})
+        if not sp:
+            continue
+        
+        yd_verdict = str(yd.get("verdict", ""))
+        today_chg = sp["change_pct"]
+        yd_direction = "偏多" if ("持股" in yd_verdict or "偏多" in yd_verdict or "试探" in yd_verdict) else "偏空"
+        today_direction = "上涨" if today_chg > 0 else "下跌"
+        
+        # 判断是否延续
+        if ("持股" in yd_verdict or "偏多" in yd_verdict) and today_chg > 0:
+            status_icon = "✅ 延续"
+            note = "趋势方向一致"
+        elif ("持股" in yd_verdict or "偏多" in yd_verdict) and today_chg < 0:
+            status_icon = "⚠️ 回调"
+            note = "关注是否破位"
+        elif "观望" in yd_verdict and today_chg < -1:
+            status_icon = "⬇️ 走弱"
+            note = "观望中的下行压力"
+        elif "观望" in yd_verdict:
+            status_icon = "➡️ 延续"
+            note = "仍在观望状态"
+        elif "空仓" in yd_verdict and today_chg < 0:
+            status_icon = "✅ 延续"
+            note = "空仓正确"
+        elif "空仓" in yd_verdict and today_chg > 0:
+            status_icon = "⚠️ 反弹"
+            note = "关注是否突破趋势"
+        else:
+            status_icon = "—"
+            note = ""
+        
+        lines.append(f"- {status_icon} **{name}**：昨日{yd_verdict} → 今日{today_direction} {today_chg:+.2f}% | {note}")
+    
     lines.append("")
     
     # ── 三、盘中 CHOP 估算 ──
