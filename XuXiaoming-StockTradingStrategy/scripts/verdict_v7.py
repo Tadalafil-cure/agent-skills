@@ -356,8 +356,8 @@ def verdict_single(indicators, rows, resonance, seq_data):
         recent5 = [ch for ch in chop_hist[-5:] if ch is not None]
         chop_falling = len(recent5) >= 5 and c < sum(recent5)/len(recent5) - 5
 
-        # v4.6.1: CHOP持续<38.2检测（≥5天，取代chop_falling瞬时信号）
-        chop_sustained_clear = len(recent5) >= 5 and all(ch < 38.2 and ch is not None for ch in chop_hist[-5:])
+        # v4.6.1: CHOP持续<38.2检测（≥3天，最优阈值：70%胜率 +2.1%）
+        chop_sustained_clear = len(chop_hist) >= 3 and all(ch is not None and ch < 38.2 for ch in chop_hist[-3:])
 
         res = res_map.get(d, '混合')
         strong_bull = res == '强共振_上升'

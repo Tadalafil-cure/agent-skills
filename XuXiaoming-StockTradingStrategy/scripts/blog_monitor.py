@@ -48,31 +48,41 @@ def parse_articles(html: str) -> list[tuple[str, str, str]]:
     return articles
 
 
-def expected_publish_date(analysis_date: str) -> str:
+def expected_publish_date(analysis_date: str) -> tuple[str, str]:
     """
-    预期发布日期：分析日前一个交易日。
-    周一 → 前周五；周二至周五 → 前一天。
+    预期发布日期 + 目标标题（基于"下个交易日"修正）。
+    徐小明收盘后发布策略，针对下一个交易日。
+    周五 → 周末发布的"周一操作策略"；周一至周四 → 前一天发布的策略。
+    Returns: (expected_publish_date, target_title)
     """
     dt = datetime.strptime(analysis_date, "%Y-%m-%d")
-    if dt.weekday() == 0:
-        prev = dt - timedelta(days=3)
-    else:
-        prev = dt - timedelta(days=1)
-    return prev.strftime("%Y-%m-%d")
+    w = dt.weekday()
+    if w == 4:  # 周五 → 下周一，周日发布
+        next_td = dt + timedelta(days=3)
+        expected = dt + timedelta(days=2)  # 周日发布
+    elif w == 5:  # 周六 → 下周一
+        next_td = dt + timedelta(days=2)
+        expected = dt + timedelta(days=1)
+    elif w == 6:  # 周日 → 下周一（当天发布）
+        next_td = dt + timedelta(days=1)
+        expected = dt
+    else:  # 周一至周四 → 下一个交易日
+        next_td = dt + timedelta(days=1)
+        expected = dt
+    target_title = WEEKDAY_MAP[next_td.weekday()] + "操作策略"
+    return expected.strftime("%Y-%m-%d"), target_title
 
 
 def find_article(analysis_date: str) -> dict | None:
     """
-    查找针对 analysis_date 的操作策略文章。
-
+    查找分析日期对应的操作策略文章。
     匹配条件（三重校验）：
-    1. 标题 = "[周X]操作策略"，周X = 分析日的星期几
-    2. 发布日期 = 分析日前一个交易日（±1天容差）
-    3. 发布日期不能旧于预期窗口
+    1. 标题 = 下一个交易日的"[周X]操作策略"
+    2. 发布日期窗口
+    3. 发布日期不能旧于预期
     """
     dt = datetime.strptime(analysis_date, "%Y-%m-%d")
-    target_title = WEEKDAY_MAP[dt.weekday()] + "操作策略"
-    expected = expected_publish_date(analysis_date)
+    expected, target_title = expected_publish_date(analysis_date)
 
     for page in range(1, 5):
         try:
@@ -90,7 +100,9 @@ def find_article(analysis_date: str) -> dict | None:
         for pub_date, title, url in articles:
             if target_title not in title:
                 continue
-            if pub_date >= analysis_date:
+            # 周五的分析日→文章在周末发布（pub_date >= analysis_date 正常）
+            dt = datetime.strptime(analysis_date, "%Y-%m-%d")
+            if dt.weekday() != 4 and pub_date >= analysis_date:
                 continue
             if pub_date < expected:
                 continue  # 太旧，跳过（如上周的同名文章）

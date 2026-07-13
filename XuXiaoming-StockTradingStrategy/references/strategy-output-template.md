@@ -222,7 +222,7 @@ print(annual_structure_table())
 ---
 
 > 模板版本：v1.6 | 2026-07-14（新增强制数据校验步骤 + A17 反模式）
-> 配套技能：XuXiaoming-StockTradingStrategy v4.5.3
+> 配套技能：XuXiaoming-StockTradingStrategy v4.5.6
 
 ---
 
@@ -277,10 +277,11 @@ print(annual_structure_table())
 
 ---
 
-## 九、博客对照（可选 · 分析末尾独立输出）
+## 九、博客对照（独立追加 · 不进入分析上下文）
 
-> **本节在分析完全结束后独立运行，不干扰前八段的模型判断。用户未必每次都启用。**
-> 运行 `python scripts/blog_monitor.py --date YYYY-MM-DD` 查询当日操作策略文章。
+> **本节在主Agent统稿完成后，由父Agent在独立上下文中运行，输出直接追加到报告末尾。**
+> **主Agent和子Agent在任何阶段都不得读取博客内容——博客只能作为已封版报告的附录，不能参与分析。**
+> 运行 `python scripts/blog_monitor.py --date YYYY-MM-DD`，将输出直接粘贴。
 > 若有文章，提取徐小明核心判断，与模型裁决比对。格式：
 
 ```
