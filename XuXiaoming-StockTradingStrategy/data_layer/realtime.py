@@ -459,10 +459,14 @@ def check_minute_structure(fetch_today: bool = True) -> dict:
                     if col in last.index and pd.notna(last[col]) and int(last[col]) == 1:
                         parts.append(period)
                 
-                # 钝化检测
-                for period, col in [("60min", "diverge_60"), ("90min", "diverge_90"), ("120min", "diverge_120")]:
-                    if col in last.index and pd.notna(last[col]) and float(last[col]) == 1:
-                        parts.append(f"{period}钝化")
+                # 顶钝化
+                for period, col in [("60min", "td_60"), ("90min", "td_90"), ("120min", "td_120")]:
+                    if col in last.index and pd.notna(last[col]) and int(last[col]) == 1:
+                        parts.append(f"{period}顶钝化")
+                # 底钝化（需结合日线判断，仅标注）
+                for period, col in [("60min", "bd_60"), ("90min", "bd_90"), ("120min", "bd_120")]:
+                    if col in last.index and pd.notna(last[col]) and int(last[col]) == 1:
+                        parts.append(f"{period}底钝化⚠")
                 
                 signal_level = str(last.get("signal_level", "")) if "signal_level" in last.index else ""
                 top_res = int(last.get("top_resonance", 0) or 0) if "top_resonance" in last.index else 0

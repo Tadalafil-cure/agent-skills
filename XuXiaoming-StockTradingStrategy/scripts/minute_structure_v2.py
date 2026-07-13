@@ -40,60 +40,58 @@ def compute_macd(close, fast=4, slow=30, signal=4):
     return dif, dea, macd_bar
 
 
-def find_divergence(df, lookback_days=20):
+def find_divergence(df, lookback=20):
     """
-    检测钝化: 价格创新高/低但 DIF 未确认。
-    lookback_days: 回溯多少个自然日找高/低点 (分钟线回溯)
+    极值法钝化检测 (v3.0)
+    底钝化: 价格创 lookback 根K线新低 + DIF 未创新低
+    顶钝化: 价格创 lookback 根K线新高 + DIF 未创新高
+    回测结论: 顶钝化可靠(89-98%转化率), 底钝化需结合日线信号
     """
     n = len(df)
-    diverge = np.zeros(n, dtype=int)
+    bd = np.zeros(n, dtype=int)  # 底钝化
+    td = np.zeros(n, dtype=int)  # 顶钝化
 
-    for i in range(lookback_days, n):
-        window = df.iloc[i - lookback_days : i + 1]
+    for i in range(lookback, n):
+        w_low = df["low"].iloc[i-lookback:i]
+        w_high = df["high"].iloc[i-lookback:i]
+        w_dif = df["dif"].iloc[i-lookback:i]
 
-        # 顶部钝化: 当前价≈窗口最高，但DIF低于窗口DIF峰值
-        price_high = window["high"].max()
-        dif_peak = window["dif"].max()
-        if df["high"].iloc[i] >= price_high * 0.998 and df["dif"].iloc[i] < dif_peak * 0.9:
-            diverge[i] = 1
+        # 底钝化: 价格 ≤ 窗口最低价 且 DIF > 窗口最低DIF
+        if df["low"].iloc[i] <= w_low.min() and df["dif"].iloc[i] > w_dif.min():
+            bd[i] = 1
 
-        # 底部钝化: 当前价≈窗口最低，但DIF高于窗口DIF谷值
-        price_low = window["low"].min()
-        dif_trough = window["dif"].min()
-        if df["low"].iloc[i] <= price_low * 1.002 and df["dif"].iloc[i] > dif_trough * 1.1:
-            diverge[i] = -1
+        # 顶钝化: 价格 ≥ 窗口最高价 且 DIF < 窗口最高DIF
+        if df["high"].iloc[i] >= w_high.max() and df["dif"].iloc[i] < w_dif.max():
+            td[i] = 1
 
-    return diverge
+    return bd, td
 
 
 def detect_cross_and_structure(df):
-    """检测 DIF-DEA 交叉 + 钝化→结构"""
+    """检测 DIF-DEA 交叉 + 钝化→结构 (v3.0: 底/顶钝化分离)"""
     n = len(df)
     top_form = np.zeros(n, dtype=int)
     bottom_form = np.zeros(n, dtype=int)
-    dif_cross_up = np.zeros(n, dtype=int)    # DIF上穿DEA (金叉)
-    dif_cross_down = np.zeros(n, dtype=int)  # DIF下穿DEA (死叉)
+    dif_cross_up = np.zeros(n, dtype=int)
+    dif_cross_down = np.zeros(n, dtype=int)
 
     in_top_div = False
     in_bot_div = False
-    # 用全量数据做钝化检测
-    diverge = find_divergence(df)
+    bd, td = find_divergence(df)
 
     for i in range(1, n):
         prev_dif, prev_dea = df["dif"].iloc[i - 1], df["dea"].iloc[i - 1]
         cur_dif, cur_dea = df["dif"].iloc[i], df["dea"].iloc[i]
 
-        # DIF 上穿 DEA
         if prev_dif <= prev_dea and cur_dif > cur_dea:
             dif_cross_up[i] = 1
-        # DIF 下穿 DEA
         if prev_dif >= prev_dea and cur_dif < cur_dea:
             dif_cross_down[i] = 1
 
         # 钝化跟踪
-        if diverge[i] == 1:
+        if td[i] == 1:
             in_top_div = True
-        if diverge[i] == -1:
+        if bd[i] == 1:
             in_bot_div = True
 
         # 顶部结构: 顶钝化 + DIF下穿DEA
@@ -106,7 +104,7 @@ def detect_cross_and_structure(df):
             bottom_form[i] = 1
             in_bot_div = False
 
-    return dif_cross_up, dif_cross_down, top_form, bottom_form, diverge
+    return dif_cross_up, dif_cross_down, top_form, bottom_form, bd, td
 
 
 def process_period(code, name, period):
@@ -135,15 +133,16 @@ def process_period(code, name, period):
     df["dif"], df["dea"], df["bar"] = compute_macd(df["close"])
 
     # 检测交叉和结构
-    cross_up, cross_down, top_form, bottom_form, diverge = detect_cross_and_structure(df)
+    cross_up, cross_down, top_form, bottom_form, bd, td = detect_cross_and_structure(df)
 
     df["cross_up"] = cross_up
     df["cross_down"] = cross_down
     df["top_form"] = top_form
     df["bottom_form"] = bottom_form
-    df["diverge"] = diverge
+    df["bd"] = bd
+    df["td"] = td
 
-    # 聚合到日频: 每日最后一根K线 + 日内是否有信号
+    # 聚合到日频
     df["trade_date"] = df["date"].dt.date
     groups = df.groupby("trade_date")
 
@@ -152,12 +151,13 @@ def process_period(code, name, period):
         dif=("dif", "last"),
         dea=("dea", "last"),
         bar=("bar", "last"),
-        diverge=("diverge", "last"),
-        top_form=("top_form", "max"),       # 日内任一时点形成=当天有
+        bd=("bd", "max"),            # 日内任一时点有底钝化=当天有
+        td=("td", "max"),            # 日内任一时点有顶钝化=当天有
+        top_form=("top_form", "max"),
         bottom_form=("bottom_form", "max"),
         cross_up=("cross_up", "max"),
         cross_down=("cross_down", "max"),
-        cross_count=("cross_up", "sum"),    # 日内交叉次数
+        cross_count=("cross_up", "sum"),
     ).reset_index()
 
     daily["date"] = pd.to_datetime(daily["trade_date"])
@@ -165,15 +165,16 @@ def process_period(code, name, period):
     # 统计
     top_cnt = daily["top_form"].sum()
     bot_cnt = daily["bottom_form"].sum()
-    div_top = (daily["diverge"] == 1).sum()
-    div_bot = (daily["diverge"] == -1).sum()
-    print(f"  {period}min: 顶钝化{div_top}天 底钝化{div_bot}天 | 顶结构{top_cnt}次 底结构{bot_cnt}次")
+    td_cnt = daily["td"].sum()
+    bd_cnt = daily["bd"].sum()
+    print(f"  {period}min: 顶钝化{td_cnt}天 底钝化{bd_cnt}天 | 顶结构{top_cnt}次 底结构{bot_cnt}次")
 
     # 重命名
     prefix = f"{period}"
     daily = daily.rename(columns={
         "close": f"close_{prefix}", "dif": f"dif_{prefix}", "dea": f"dea_{prefix}",
-        "bar": f"bar_{prefix}", "diverge": f"diverge_{prefix}",
+        "bar": f"bar_{prefix}",
+        "bd": f"bd_{prefix}", "td": f"td_{prefix}",
         "top_form": f"top_form_{prefix}", "bottom_form": f"bottom_form_{prefix}",
         "cross_up": f"cross_up_{prefix}", "cross_down": f"cross_down_{prefix}",
     })

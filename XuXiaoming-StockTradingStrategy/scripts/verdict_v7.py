@@ -455,7 +455,7 @@ def verdict_single(indicators, rows, resonance, seq_data):
         results[i] = {
             'date': d, 'close': r['close'], 'regime': regime,
             'chop': c, 'chop_level': cl, 'trending': trending,
-            'bs': bs_today, 'ts': ts_today, 'bs_ok': bs_ok,
+            'bs': bs_today, 'ts': ts_today, 'bd': r.get('bd', 0), 'bs_ok': bs_ok,
             'day_seq': day_seq or '', 'month_win': in_month, 'week_win': in_week,
             'resonance': res, 'strong_bull': strong_bull, 'strong_bear': strong_bear,
             'osc_origin': osc_origin or '',
@@ -524,6 +524,7 @@ def main():
             'resonance', 'strong_bull', 'strong_bear',
             'cyb_kc_resonance',
             'bs_sz', 'ts_sz', 'bs_sh', 'ts_sh', 'bs_cyb', 'ts_cyb', 'bs_kc', 'ts_kc',
+            'bd_sz', 'bd_sh', 'bd_cyb', 'bd_kc',
             'bs_ok_sz', 'bs_ok_sh', 'bs_ok_cyb', 'bs_ok_kc',
             'day_seq_sz', 'day_seq_sh', 'day_seq_cyb', 'day_seq_kc',
             'month_win', 'week_win',
@@ -556,29 +557,59 @@ def main():
             v_sz = vf(row_sz, 'verdict'); v_sh = vf(row_sh, 'verdict')
             v_cyb = vf(row_cyb, 'verdict'); v_kc = vf(row_kc, 'verdict')
 
-            def signal_strength(v):
-                if '减仓' in str(v): return 5
-                if '持股' in str(v) and '警戒' not in str(v): return 4
-                if '持股(警戒)' in str(v): return 3
-                if '试探' in str(v): return 2
-                if '观望' in str(v): return 1
-                return 0
+            # ============================================================
+            # 共振驱动裁决（v4.6.11）
+            # 主板 = 五指数共振投票结果，上证/深证单指数裁决为辅助参考
+            # 科技 = 双创共振投票结果，创业板/科创50单指数裁决为辅助参考
+            # 单指数裁决不冒充共振共识。R5.2: 混合/分化时各指数各自判断，但标注"共振无方向"
+            # ============================================================
 
-            # 主板裁决：SZ+SH 取强
-            ss_sz = signal_strength(v_sz); ss_sh = signal_strength(v_sh)
-            if ss_sz >= ss_sh:
-                v_main = v_sz; rsn_main = 'SZ' if ss_sz > 0 else ''
+            # 五指数共振 → 主板裁决
+            bulls5 = resonance.get(d, {}).get('bullish_count', 0)
+            bears5 = resonance.get(d, {}).get('bearish_count', 0)
+            total5 = resonance.get(d, {}).get('total', 5)
+
+            resonance_to_verdict = {
+                '强共振_上升': '持股',
+                '强共振_下跌': '空仓',
+                '偏共振_偏多': '观望(偏多)',
+                '偏共振_偏空': '观望(偏空)',
+                '分化': '观望',
+                '混合': '观望',
+            }
+            v_main = resonance_to_verdict.get(res, '观望')
+            rsn_main = f'五指数{bulls5}:{bears5}({res})'
+
+            # 双创共振 → 科技裁决（v4.6.11）
+            # 架构：科创50定方向 → 双创共振定升降档
+            #   共振_偏多/偏空（两人一致）→ 维持科创50强度
+            #   分化/混合（两人不一致）→ 创业板不同意见 → 降档一级
+            # 科技与主板独立裁决——科技共振不依赖五指数共振
+            res_ck = ckr
+            v_kc_base = str(v_kc) if v_kc else '观望'
+
+            # 降档映射：创业板不同意 → 科创50强度降一级
+            downgrade = {
+                '持股': '持股(警戒)',
+                '持股(警戒)': '观望(偏多)',
+                '试探': '观望',
+                '观望(偏多)': '观望',
+                '观望': '观望',
+                '观望(偏空)': '观望',
+                '空仓': '观望(偏空)',
+                '减仓': '观望',
+            }
+
+            if res_ck in ('共振_偏多', '共振_偏空'):
+                # 两人一致 → 维持强度
+                v_tech = v_kc_base
+                rsn_tech = f'KC={v_kc_base}+{res_ck}(维持)'
             else:
-                v_main = v_sh; rsn_main = 'SH' if ss_sh > 0 else ''
+                # 分化/混合 → 创业板不同意 → 降档
+                v_tech = downgrade.get(v_kc_base, '观望')
+                rsn_tech = f'KC={v_kc_base}→{v_tech}+双创{res_ck}(降档)'
 
-            # 科技裁决：CYB+KC 取强
-            ss_cyb = signal_strength(v_cyb); ss_kc = signal_strength(v_kc)
-            if ss_cyb >= ss_kc:
-                v_tech = v_cyb; rsn_tech = 'CYB' if ss_cyb > 0 else ''
-            else:
-                v_tech = v_kc; rsn_tech = 'KC' if ss_kc > 0 else ''
-
-            rsn = f"主板:{rsn_main} 科技:{rsn_tech}"
+            rsn = f"主板:五指数{res}({bulls5}多{bears5}空) 科技:{rsn_tech}"
 
             oo_sz = vf(row_sz, 'osc_origin'); oo_sh = vf(row_sh, 'osc_origin')
 
@@ -590,6 +621,7 @@ def main():
                 res, sb, sbe, ckr,
                 vfi(row_sz, 'bs'), vfi(row_sz, 'ts'), vfi(row_sh, 'bs'), vfi(row_sh, 'ts'),
                 vfi(row_cyb, 'bs'), vfi(row_cyb, 'ts'), vfi(row_kc, 'bs'), vfi(row_kc, 'ts'),
+                vfi(row_sz, 'bd'), vfi(row_sh, 'bd'), vfi(row_cyb, 'bd'), vfi(row_kc, 'bd'),
                 vfi(row_sz, 'bs_ok'), vfi(row_sh, 'bs_ok'), vfi(row_cyb, 'bs_ok'), vfi(row_kc, 'bs_ok'),
                 vf(row_sz, 'day_seq'), vf(row_sh, 'day_seq'), vf(row_cyb, 'day_seq'), vf(row_kc, 'day_seq'),
                 mw, ww,
