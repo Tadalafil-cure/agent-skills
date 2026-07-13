@@ -159,6 +159,9 @@ def ensure_verdict_fresh():
     
     这是「盘中继前日」的核心保证——用户说"假定没有前次报告"时，
     此函数会自动补跑引擎，让盘中简报有昨日裁决可接续。
+    
+    但注意：此函数只保证 CSV 数据就绪，不负责生成前日完整报告（八段 markdown）。
+    前日报告由 Agent 在触发盘中前单独生成（有则复用，无则补跑全流程）。
     """
     verdict_path = DATA / "verdict_v7.csv"
     prev_day = get_previous_trading_day()
