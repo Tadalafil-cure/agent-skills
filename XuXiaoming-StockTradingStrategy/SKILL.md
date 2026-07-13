@@ -14,7 +14,7 @@ description: >
 
 > 蒸馏自「投资明见」公众号 2019.01–2026.07，2124篇文章（42篇长文 + 2082篇短文/午评）
 - 引擎：mind-distill v3.8（能力层）+ nuwa（表达层）+ verdict v4.4.2（规则层+工具接入层+分钟线修边+数据中间层）
-- 版本：v4.6.1 | 2026-06-25（震荡框架闭环 + 博客三层隔离 + 市况论证分列 + 铁律推论固化。规则层8组对应7默认工具+原文支撑全覆盖）
+- 版本：v4.6.2 | 2026-06-25（震荡分支审计完成：移除ts→空仓冲突，CHOP≥3天持续收敛触发试探79%胜率，单日<38.2标注关注。规则层全量对齐引擎实现）
 - 操作策略输出：必须遵循 `references/strategy-output-template.md`（v1.5）九段结构：一~六完整数据版 → 七·总结（徐小明公众号风格）→ 八·极简版（时期三零术语风格，用于与徐小明原文风格级比对）→ 九·博客对照（可选）。强制要求：双Agent并行（主板/科技各一子Agent独立分析→父Agent跨市场合成）、四指数全覆盖、趋势-结构-序列三层交叉验证、总结用时期三极简短句仿公众号风格。
 
 ---
@@ -405,8 +405,10 @@ description: >
 | **R2.1** | < 38.2（clear） | 趋势清晰 | 趋势为王，结构仅修边 | [20190210] 趋势为王结构修边 |
 | **R2.2** | 38–62（fuzzy） | 趋势模糊 | 趋势和结构等权重；震荡+fuzzy中分钟线底结构禁用 | [20191031] 震荡趋势挨打，高低点又没有结构 |
 | **R2.3** | > 61.8（chaotic） | 趋势混乱 | 结构主导；恐慌出清后底结构可靠；分钟线底结构允许 | [20190212] 快速猛烈的上升会干掉一切结构 |
+| **R2.4** | **持续<38.2 ≥3天** | 趋势涌现 | 震荡中CHOP持续低位≥3天+方向偏多→试探（v4.6.1新增，回测：10信号，20日70%胜率+2.1%，40日70%胜率+2.6%） | [20190212] 快速猛烈的上升会干掉一切结构——CHOP持续低位=结构被干掉=趋势主导 |
+| **R2.5** | **单日<38.2** | 关注信号 | 震荡中CHOP跌破38.2但未满3天→不触发操作，仅标注"CHOP<38.2关注"（v4.6.2新增。94%单日跌破为假收敛，需持续确认） | — |
 
-**CHOP 角色**：趋势可信度计，非趋势强度计。CHOP 越高趋势越不可靠 → 结构权重越大。震荡+chaotic 是「钝化反复→结构级别加大」的密集区（类924前夕微观版）。
+**CHOP 角色**：趋势可信度计，非趋势强度计。CHOP 越高趋势越不可靠 → 结构权重越大。震荡+chaotic 是「钝化反复→结构级别加大」的密集区（类924前夕微观版）。**CHOP 瞬时下降不可靠**（94%触及38.2后弹回假收敛），只有**持续<38.2≥3天**才是真正的趋势涌现信号。
 
 ---
 
@@ -671,10 +673,13 @@ NH/NL 2周内首次确认    NH/NL早就确认了
 - 输出：结构化JSON（stage/ratio/cnhl/divergence + 记忆字段）
 - 用法：`from data_layer.breadth import analyze; signal = analyze(n=60)`
 
-创业板+科创50双共振回测：`scripts/backtest_cyb_kc.py` → `references/cyb-kc-resonance-backtest.md`
+**v6→v7改进**：多指数共振替代单指数、双指数独立裁决替代深证唯一、BS综合筛选压降噪音(试探164→45)、信号强度优先合并(2024起)。
+**v4.6.1**：震荡来路检测(H17)入代码——detect_oscillation_origin() 回看≥7天趋势段，上行来路=观望(偏多)，下行来路=观望。CSV新增 osc_origin_sz/osc_origin_sh 列。
 
 运行: `python scripts/verdict_v7.py`
+产出: `data/verdict_v7.csv`（40+列，含 osc_origin_sz/osc_origin_sh，四指数独立裁决 + 两市场裁决 + 共振）
 
+**GitHub 发布约定**：skill 运行时副本 `~/.hermes/skills/XuXiaoming-StockTradingStrategy/`，git 仓库 `/home/admin/agent-skills/XuXiaoming-StockTradingStrategy/`（`Tadalafil-cure/agent-skills`）。修改后 `cp -r` 同步到 agent-skills → `git commit && git push`。禁止提交 `data/*.csv`、`reports/`。
 ### 如何替换工具
 
 1. 实现你的趋势方向判定函数 → 输出 `{date, regime(上行/偏多/震荡/偏空/下行), bullish}`
@@ -754,6 +759,8 @@ data/minute_structure_v2_{sh,sz}.csv ← 分钟线结构(需分钟线数据)
 | `scripts/unimportant_detector.py` | "不重要"检测 | `data/unimportant_daily.csv` |
 | `scripts/wave_tracker.py` | 浪型追踪（预留接口） | — |
 | `scripts/blog_monitor.py` | **博客对照**：查询+抓取徐小明操作策略文章（日期偏移+三重校验+正文提取） | 终端输出 |
+| `scripts/blind_test_sample.py` | **盲测抽样**：年60天随机抽样 + 本地文章匹配 + 引擎裁决注入 | /tmp/blind_test_batch.json |
+| `scripts/blind_test_compare.py` | **盲测比对**：汇总LLM提取结果 + A10修正方向级比对 + 统计报告 | 控制台输出 |
 | `scripts/full_validation.py` | 全管线交叉验证 | — |
 | `data_layer/breadth.py` | **广度引擎 v1**：NH/NL双公式 + 四阶段判定 | `data/breadth_daily.csv` + 结构化 JSON |
 | `data_layer/loader.py` | **数据加载器 v1**：统一读取接口，长/宽格式透明，列名校验内置。`get_structures()`/`get_verdict()`/`get_breadth()`/`annual_structure_table()` | DataFrame（宽格式） |
@@ -920,7 +927,8 @@ L2  日线层
 ```
 趋势期+上行/偏多 → 持股（顶部结构→持股(警戒)，高9→持股(警戒)）
 趋势期+下行/偏空 → 空仓（底部结构+BS筛选通过→试探(恐慌底/磨底/衰竭底)）
-震荡期          → 观望（底部结构+BS筛选→试探；CHOP收敛+方向转正→试探）
+震荡期          → 来路检测(H17,v4.6.1)：回看≥7天趋势段→上行来路=观望(偏多)，下行来路=观望
+                  底部结构+BS筛选→试探；CHOP收敛+方向转正→试探
 ```
 月周低9窗口内：试探→升档为持股。
 
@@ -935,9 +943,12 @@ L2  日线层
 **关键节点**：2022-04-27 试探(恐慌底)✓ / 2024-09-19 试探(磨底)✓ / 2024-09-24 持股(上证突破)✓ / 2021-09-08 空仓(深证空+分化)✓
 
 **v6→v7改进**：多指数共振替代单指数、双指数独立裁决替代深证唯一、BS综合筛选压降噪音(试探164→45)、信号强度优先合并(2024起)。
+**v4.6.1**：震荡来路检测(H17)入代码——detect_oscillation_origin() 回看≥7天趋势段，上行来路=观望(偏多)，下行来路=观望。CSV新增 osc_origin_sz/osc_origin_sh 列。
 
 运行: `python scripts/verdict_v7.py`
-产出: `data/verdict_v7.csv`（24列，含两市regime/chop/共振/结构/序列/裁决）
+产出: `data/verdict_v7.csv`（40+列，含 osc_origin_sz/osc_origin_sh，四指数独立裁决 + 两市场裁决 + 共振）
+
+**GitHub 发布约定**：skill 运行时副本 `~/.hermes/skills/XuXiaoming-StockTradingStrategy/`，git 仓库 `/home/admin/agent-skills/XuXiaoming-StockTradingStrategy/`（`Tadalafil-cure/agent-skills`）。修改后 `cp -r` 同步到 agent-skills → `git commit && git push`。禁止提交 `data/*.csv`、`reports/`。
 
 详见 `references/v7-architecture.md`
 
