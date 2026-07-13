@@ -390,18 +390,14 @@ def verdict_single(indicators, rows, resonance, seq_data):
             if strong_bear and bullish:
                 verdict = '持股(警戒)'; reason = '强共振下跌+单指数偏多→警戒'
         else:
-            # 震荡市
+            # 震荡市（v4.6.1 震荡框架）
+            # 规则优先级: BS+filter > CHOP收敛 > 序列信号 > 来路默认
+            # 注意: 震荡中顶结构不触发操作（A19: 区间标记，非操作信号）
             if (bs_today and bs_ok) or (bs_recent and bs_ok):
                 tag, rsn = bs_pattern(c, chop_hist)
                 if in_month: tag = tag.replace('试探','持股')+'+月低9'; rsn += '+月低9'
                 elif in_week: tag = tag.replace('试探','持股')+'+周低9'; rsn += '+周低9'
                 verdict = tag; reason = rsn
-            elif ts_today or ts_recent:
-                # v4.6.1: 顶结构含义取决于来路
-                if osc_origin == '下行':
-                    verdict = '试探'; reason = '震荡(来路下行)+顶结构→等突破'
-                else:
-                    verdict = '空仓'; reason = '震荡(来路上行)+顶结构→空仓'
             elif chop_falling and bullish:
                 verdict = '试探'; reason = 'CHOP收敛+方向转正→等突破'
                 if strong_bull: verdict = '持股'; reason += '+强共振上升'
