@@ -379,6 +379,9 @@ def verdict_single(indicators, rows, resonance, seq_data):
                     verdict = '持股(警戒)'; reason = '趋势+顶结构→警戒'
                 elif day_seq == '高9':
                     verdict = '持股(警戒)'; reason = '趋势+高9→警戒'
+                # v4.6.2: CHOP > 55 逼近切换线 → 趋势可信度下降，标注风险
+                if verdict == '持股' and c is not None and c > 55:
+                    reason += ' | ⚠️CHOP偏高(逼近61.8切换线)'
             else:
                 verdict = '空仓'; reason = '趋势向下'
                 if (bs_today and bs_ok) or (bs_recent and bs_ok):
