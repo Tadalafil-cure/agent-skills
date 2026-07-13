@@ -8,7 +8,7 @@
   1. daily_raw.csv → 按指数拆分 + 运行 structure_engine → structure_signals.csv
   2. daily_raw.csv → 运行 sequence_engine → turn_sequence_events.csv
   3. structure_signals.csv → 运行 verdict_v7 → verdict_v7.csv (含多指数共振)
-  4. (可选) 分钟线数据 → 运行 minute_structure_v2 → minute_structure_v2_{sh,sz}.csv
+  #  4. (可选) 分钟线数据 → 运行 minute_structure_v2 → minute_structure_v2_{sh,sz,cyb,kc}.csv
 
 依赖：已拉取 daily_raw.csv（通过 fetch.py）
 """
@@ -267,6 +267,8 @@ def make_minute_structures() -> list:
     outputs = [
         str(OUT_DIR / "minute_structure_v2_sh.csv"),
         str(OUT_DIR / "minute_structure_v2_sz.csv"),
+        str(OUT_DIR / "minute_structure_v2_cyb.csv"),
+        str(OUT_DIR / "minute_structure_v2_kc.csv"),
     ]
     for p in outputs:
         if os.path.exists(p):

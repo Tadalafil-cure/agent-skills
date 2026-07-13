@@ -4,6 +4,12 @@
 =====================
 从 akshare 抽取 A 股指数日线 + 分钟线 OHLC 数据。
 
+日线数据源（akshare 优先 + 时效检测 → Sina 补缺失交易日）：
+  主源: ak.stock_zh_index_daily (akshare → Eastmoney 历史)
+  时效: akshare 成功后检查最新日期 → 滞后则自动用 Sina 补缺失交易日
+  补源: ak.stock_zh_index_spot_sina (akshare 异常时全量 fallback; 正常时仅补缺口)
+  缓存: data/daily_spot_cache.json (Sina 成功后写缓存, 后续 API 失败读缓存)
+
 支持的指数：
   上证指数 (sh000001)  深证成指 (sz399001)  创业板指 (sz399006)
   科创50   (sh000688)  沪深300  (sh000300)  中证500  (sh000905)
@@ -20,8 +26,10 @@ import akshare as ak
 from pathlib import Path
 import sys
 import time
+import urllib.request
+import json
 
-# 指数映射
+# 指数映射 · Eastmoney secid
 INDICES = {
     "sh000001": "上证指数",
     "sz399001": "深证成指",
@@ -31,10 +39,92 @@ INDICES = {
     "sh000905": "中证500",
 }
 
+EM_SECID = {
+    "sh000001": "1.000001",
+    "sz399001": "0.399001",
+    "sz399006": "0.399006",
+    "sh000688": "1.000688",
+    "sh000300": "1.000300",
+    "sh000905": "1.000905",
+}
+
 # 日线起点：蒸馏自2019-26，拉到18年初可做一年前置验证
 START_DATE = "20180101"
 
 OUT_DIR = Path(__file__).resolve().parent.parent / "data"
+
+
+def _fetch_sina_spot() -> pd.DataFrame | None:
+    """
+    一次性拉取六指数 Sina 实时行情（akshare 封装）。
+    返回 DataFrame，cols: 代码, 名称, 今开, 最高, 最低, 最新价, 成交量。
+    失败返回 None。
+    """
+    try:
+        df = ak.stock_zh_index_spot_sina()
+        targets = list(INDICES.keys())
+        df = df[df["代码"].isin(targets)].copy()
+        df = df.rename(columns={
+            "代码": "symbol", "名称": "name", "今开": "open",
+            "最高": "high", "最低": "low", "最新价": "close", "成交量": "volume",
+        })
+        return df[["symbol", "name", "open", "high", "low", "close", "volume"]]
+    except Exception:
+        return None
+
+
+def fetch_index_daily_em(symbol: str, name: str, start_date: str = START_DATE) -> pd.DataFrame:
+    """
+    Sina 实时接口取当日 OHLC（ak.stock_zh_index_spot_sina）。
+
+    仅返回当日一根日线。历史数据由 akshare 负责。
+    带本地缓存：API 成功→写缓存，API 失败→读缓存。
+    """
+    today_str = pd.Timestamp.now().strftime("%Y-%m-%d")
+    p = OUT_DIR / "daily_spot_cache.json"
+
+    # 读缓存
+    cache = {}
+    if p.exists():
+        try:
+            cache = json.loads(p.read_text())
+        except Exception:
+            pass
+
+    # 尝试实时拉取
+    spot = _fetch_sina_spot()
+    if spot is not None and len(spot) > 0:
+        # 写入缓存
+        for _, r in spot.iterrows():
+            cache.setdefault(r["symbol"], {})[today_str] = {
+                "open": float(r["open"]), "close": float(r["close"]),
+                "high": float(r["high"]), "low": float(r["low"]),
+                "volume": int(r["volume"]),
+            }
+        try:
+            p.write_text(json.dumps(cache, ensure_ascii=False, default=str))
+        except Exception:
+            pass
+        print("✓ Sina", end=" ")
+
+    # 从缓存取当前 symbol
+    row = cache.get(symbol, {}).get(today_str)
+    if not row or row.get("close", 0) <= 0:
+        return pd.DataFrame()
+    if spot is None:
+        print("↻ 缓存", end=" ")
+
+    df = pd.DataFrame([{
+        "date": today_str,
+        "open": row["open"], "close": row["close"],
+        "high": row["high"], "low": row["low"],
+        "volume": row["volume"],
+    }])
+    df["date"] = pd.to_datetime(df["date"])
+    df["index_code"] = symbol
+    df["index_name"] = name
+    cols = ["date", "index_code", "index_name", "open", "high", "low", "close", "volume"]
+    return df[cols]
 
 
 def fetch_index_daily(symbol: str, name: str, start_date: str = START_DATE) -> pd.DataFrame:
@@ -66,10 +156,26 @@ def fetch_index_daily(symbol: str, name: str, start_date: str = START_DATE) -> p
         result = df[cols].sort_values("date").reset_index(drop=True)
         # 过滤起始日期
         result = result[result["date"] >= pd.Timestamp(start_date)]
+        # ── 时效检测：akshare 成功但数据滞后 → Sina 补缺失交易日 ──
+        today = pd.Timestamp.now().normalize()
+        latest = result["date"].max()
+        if today > latest:
+            spot = fetch_index_daily_em(symbol, name, start_date)
+            if len(spot) > 0 and spot["date"].max() > latest:
+                result = pd.concat([result, spot], ignore_index=True)
+                result = result.sort_values("date").reset_index(drop=True)
         print(f"{len(result)} 行 ({result['date'].min().strftime('%Y-%m-%d')} ~ {result['date'].max().strftime('%Y-%m-%d')})")
         return result
     except Exception as e:
-        print(f"❌ {e}")
+        print(f"❌ akshare 失败: {e}")
+        print(f"   ↳ Sina 实时补...", end=" ")
+        try:
+            result = fetch_index_daily_em(symbol, name, start_date)
+            if len(result) > 0:
+                print(f"{len(result)} 行 ({result['date'].min().strftime('%Y-%m-%d')} ~ {result['date'].max().strftime('%Y-%m-%d')})")
+                return result
+        except Exception as e2:
+            print(f"❌ Sina 也失败: {e2}")
         return pd.DataFrame()
 
 
