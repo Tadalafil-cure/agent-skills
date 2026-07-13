@@ -55,6 +55,16 @@ def is_trading_day(d: date = None) -> bool:
     return True
 
 
+def get_previous_trading_day(ref_date: date = None) -> date:
+    """获取 ref_date 之前最近的一个交易日（跳过周末）"""
+    if ref_date is None:
+        ref_date = _china_now().date()
+    d = ref_date - timedelta(days=1)
+    while d.weekday() >= 5:  # 跳过周末
+        d -= timedelta(days=1)
+    return d
+
+
 def is_trading_hours(now: datetime = None) -> bool:
     """判断是否在 A 股交易时段内（北京时间）"""
     if now is None:
@@ -80,6 +90,21 @@ def market_status() -> str:
     if t < time(9, 30):
         return "盘前"
     return "收盘"
+
+
+def today_has_minute_data() -> bool:
+    """检测今日分钟线是否已拉取"""
+    today_str = _china_now().strftime("%Y-%m-%d")
+    for idx_code in ["sh000001", "sz399001"]:
+        name_map = {"sh000001": "上证指数", "sz399001": "深证成指"}
+        csv_path = DATA / f"minute_raw_60_{idx_code}_{name_map[idx_code]}.csv"
+        if csv_path.exists():
+            df = pd.read_csv(csv_path)
+            if "date" in df.columns:
+                df["date_d"] = pd.to_datetime(df["date"]).dt.date
+                if today_str in df["date_d"].astype(str).values:
+                    return True
+    return False
 
 
 # ============================================================
@@ -127,12 +152,51 @@ def get_spot() -> dict:
 
 
 # ============================================================
-# 3. 前一交易日裁决 + 历史数据
+# 3. 前一交易日裁决（含自动引擎前置）
 # ============================================================
+def ensure_verdict_fresh():
+    """确保 verdict_v7.csv 包含前一交易日数据，无则自动跑裁决引擎。
+    
+    这是「盘中继前日」的核心保证——用户说"假定没有前次报告"时，
+    此函数会自动补跑引擎，让盘中简报有昨日裁决可接续。
+    """
+    verdict_path = DATA / "verdict_v7.csv"
+    prev_day = get_previous_trading_day()
+    prev_str = prev_day.strftime("%Y-%m-%d")
+    
+    need_run = False
+    if not verdict_path.exists():
+        need_run = True
+    else:
+        df = pd.read_csv(verdict_path)
+        if prev_str not in df["date"].values:
+            need_run = True
+    
+    if need_run:
+        import subprocess
+        engine_path = SCRIPTS / "verdict_v7.py"
+        result = subprocess.run(
+            [sys.executable, str(engine_path)],
+            capture_output=True, text=True, timeout=120,
+            cwd=str(BASE)
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"裁决引擎运行失败:\n{result.stderr}")
+
+
 def get_yesterday_verdict() -> dict:
-    """读取 verdict_v7.csv 最后一个交易日的数据"""
+    """读取前一交易日的裁决数据（精确跳过周末+今天）"""
+    ensure_verdict_fresh()
+    
     df = pd.read_csv(DATA / "verdict_v7.csv")
-    last = df.iloc[-1]
+    prev_day = get_previous_trading_day()
+    prev_str = prev_day.strftime("%Y-%m-%d")
+    
+    # 精确定位前一交易日行（而不是简单取最后一行）
+    prev_rows = df[df["date"] == prev_str]
+    if len(prev_rows) == 0:
+        raise RuntimeError(f"前一交易日 {prev_str} 在 verdict_v7.csv 中不存在")
+    last = prev_rows.iloc[-1]
     
     indices_map = {
         "上证指数": "sh", "深证成指": "sz",
@@ -312,9 +376,10 @@ def check_minute_structure(fetch_today: bool = True) -> dict:
     运行分钟线结构引擎，检测今日是否有结构形成。
     
     Args:
-        fetch_today: 是否先拉取今日分钟线数据
+        fetch_today: 是否先拉取今日分钟线数据。设为 True 时会先检测
+                     今日数据是否已有，已有则跳过拉取（避免重复~40s耗时）。
     """
-    if fetch_today:
+    if fetch_today and not today_has_minute_data():
         try:
             from data_layer.fetch import fetch_all_minute
             fetch_all_minute()
