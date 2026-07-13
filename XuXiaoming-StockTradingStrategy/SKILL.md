@@ -1358,5 +1358,6 @@ v4 使用了**外来指标**（前 N 日最高/最低 Donchian channel + ATR 滚
 > LLM方法：`references/llm-extraction-method.md` — 正则→LLM提取方法论演进
 > 分化演化：`references/divergence-evolution.md` — 徐小明"分化"工具 2019-2026 演化史（R8 设计依据）
 > 滞回回测：`references/hysteresis-backtest.md` — 预备信号滞回测试（不加滞回的决策依据）
+> 实时行情：`references/realtime-data-sources.md` — A股指数实时行情接口探索 + 盘中裁决集成方案（akshare Sina/东方财富源）
 > R8交叉回测：`references/r8-prep-during-wait-backtest.md` — 观望期预备信号交叉模式 + 同步/滞后统计 + 多次预警规律
 > R8完整回测：`references/r8-double-low-confirm-backtest.md` — 叠加低位双确认 + 切换确认vs裁决趋势 + 连错模式全量统计（R8.5-R8.9 数据支撑）
