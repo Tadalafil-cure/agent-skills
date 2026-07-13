@@ -358,6 +358,7 @@ def verdict_single(indicators, rows, resonance, seq_data):
 
         # v4.6.1: CHOP持续<38.2检测（≥3天，最优阈值：70%胜率 +2.1%）
         chop_sustained_clear = len(chop_hist) >= 3 and all(ch is not None and ch < 38.2 for ch in chop_hist[-3:])
+        chop_below_38 = c is not None and c < 38.2  # 单日关注信号
 
         res = res_map.get(d, '混合')
         strong_bull = res == '强共振_上升'
@@ -402,7 +403,7 @@ def verdict_single(indicators, rows, resonance, seq_data):
                 elif in_week: tag = tag.replace('试探','持股')+'+周低9'; rsn += '+周低9'
                 verdict = tag; reason = rsn
             elif chop_sustained_clear and bullish:
-                verdict = '试探'; reason = 'CHOP持续<38.2(≥5天)+方向偏多→试探'
+                verdict = '试探'; reason = 'CHOP持续<38.2(≥3天)+方向偏多→试探'
                 if strong_bull: verdict = '持股'; reason += '+强共振上升'
             elif day_seq == '高9':
                 verdict = '观望(偏空)'; reason = '震荡+高9'
@@ -416,6 +417,9 @@ def verdict_single(indicators, rows, resonance, seq_data):
                     verdict = '观望'; reason = '震荡，来路下行→观望'
                 else:
                     verdict = '观望'; reason = '震荡'
+                # CHOP<38.2 单日关注（不触发操作，仅标注）
+                if chop_below_38 and not chop_sustained_clear:
+                    reason += ' | CHOP<38.2关注'
 
         results[i] = {
             'date': d, 'close': r['close'], 'regime': regime,
