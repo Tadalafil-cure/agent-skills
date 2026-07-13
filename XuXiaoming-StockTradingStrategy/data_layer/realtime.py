@@ -343,12 +343,33 @@ def check_minute_structure(fetch_today: bool = True) -> dict:
             df = pd.read_csv(csv_path)
             if len(df) > 0:
                 last = df.iloc[-1]
+                # 解析结构信号
+                parts = []
+                for period, col in [("60min", "top_form_60"), ("60min底", "bottom_form_60"),
+                                     ("90min", "top_form_90"), ("90min底", "bottom_form_90"),
+                                     ("120min", "top_form_120"), ("120min底", "bottom_form_120")]:
+                    if col in last.index and pd.notna(last[col]) and int(last[col]) == 1:
+                        parts.append(period)
+                
+                # 钝化检测
+                for period, col in [("60min", "diverge_60"), ("90min", "diverge_90"), ("120min", "diverge_120")]:
+                    if col in last.index and pd.notna(last[col]) and float(last[col]) == 1:
+                        parts.append(f"{period}钝化")
+                
+                signal_level = str(last.get("signal_level", "")) if "signal_level" in last.index else ""
+                top_res = int(last.get("top_resonance", 0) or 0) if "top_resonance" in last.index else 0
+                bot_res = int(last.get("bot_resonance", 0) or 0) if "bot_resonance" in last.index else 0
+                golden = int(last.get("golden_cross_res", 0) or 0) if "golden_cross_res" in last.index else 0
+                dead = int(last.get("dead_cross_res", 0) or 0) if "dead_cross_res" in last.index else 0
+                
                 result[idx_name] = {
                     "date": str(last.get("date", "")),
-                    "60min": str(last.get("60min_signal", "")),
-                    "90min": str(last.get("90min_signal", "")),
-                    "120min": str(last.get("120min_signal", "")),
-                    "resonance": str(last.get("resonance_level", "")),
+                    "signals": ", ".join(parts) if parts else "无",
+                    "signal_level": signal_level,
+                    "top_resonance": top_res,
+                    "bot_resonance": bot_res,
+                    "golden_cross": golden,
+                    "dead_cross": dead,
                 }
     return result
 
@@ -533,9 +554,25 @@ def generate_briefing(spot: dict, yesterday: dict, chop_est: dict,
     lines.append("")
     if minute_signals and not minute_signals.get("error"):
         for idx_name, sig in minute_signals.items():
-            lines.append(f"- **{idx_name}**：60min={sig.get('60min', '—')} | "
-                        f"90min={sig.get('90min', '—')} | 120min={sig.get('120min', '—')} | "
-                        f"共振={sig.get('resonance', '—')}")
+            level = sig.get("signal_level", "—")
+            signals = sig.get("signals", "—")
+            top_r = sig.get("top_resonance", 0)
+            bot_r = sig.get("bot_resonance", 0)
+            golden = sig.get("golden_cross", 0)
+            dead = sig.get("dead_cross", 0)
+            
+            status_line = f"- **{idx_name}**：{level}"
+            if signals != "无":
+                status_line += f" | {signals}"
+            if top_r:
+                status_line += f" | 顶共振={top_r}"
+            if bot_r:
+                status_line += f" | 底共振={bot_r}"
+            if golden:
+                status_line += f" | 金叉共振={golden}"
+            if dead:
+                status_line += f" | 死叉共振={dead}"
+            lines.append(status_line)
     else:
         lines.append("- 分钟线数据未拉取或引擎不可用")
         if minute_signals.get("error"):
