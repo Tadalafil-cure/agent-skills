@@ -112,7 +112,7 @@ def get_top_level(row):
 
 def refine(row, df=None, idx=None):
     """v4.4.1 裁决修正"""
-    verdict = str(row.get("verdict_final", "观望"))
+    verdict = str(row.get("verdict_main", row.get("verdict_final", "观望")))
     bot_lvl = get_bot_level(row)
     top_lvl = get_top_level(row)
 
@@ -149,7 +149,7 @@ def backtest(df):
     for i in range(len(df)):
         row = df.iloc[i]
         d = row["date"]
-        orig = str(row["verdict_final"])
+        orig = str(row.get("verdict_main", row.get("verdict_final", "观望")))
         refined, reason = refine(row, df, i)
 
         fwd = df[(df["date"] > d) & (df["date"] <= d + pd.Timedelta(days=30))]

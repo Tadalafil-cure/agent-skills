@@ -422,13 +422,24 @@ def verdict_single(indicators, rows, resonance, seq_data):
                 verdict = '持股(警戒)'; reason = '强共振下跌+单指数偏多→警戒'
         else:
             # 震荡市（v4.6.1 震荡框架）
-            # 规则优先级: BS+filter > CHOP收敛 > 序列信号 > 来路默认
-            # 注意: 震荡中顶结构不触发操作（A19: 区间标记，非操作信号）
+            # 规则优先级: BS+filter(下行来路) > CHOP收敛 > 序列信号 > 来路默认
+            # v4.6.13: 上行来路震荡中底结构不独立触发操作——仅关注，等出口方向或趋势突破
+            #   - 上行来路: 顶结构已减仓，底结构是反弹不是反转，不抄底
+            #   - 下行来路: 空仓等入场，底结构是唯一标准，BS筛选通过→试探
+            #   - 来路不明: 保守处理，不触发
             if (bs_today and bs_ok) or (bs_recent and bs_ok):
-                tag, rsn = bs_pattern(c, chop_hist)
-                if in_month: tag = tag.replace('试探','持股')+'+月低9'; rsn += '+月低9'
-                elif in_week: tag = tag.replace('试探','持股')+'+周低9'; rsn += '+周低9'
-                verdict = tag; reason = rsn
+                if osc_origin == '上行':
+                    verdict = '观望'; reason = '来路上行+底结构→关注(不触发)'
+                    if in_month: reason += '+月低9'
+                    if day_seq == '低9': verdict = '观望(偏多)'; reason += '+低9'
+                elif osc_origin == '下行':
+                    tag, rsn = bs_pattern(c, chop_hist)
+                    if in_month: tag = tag.replace('试探','持股')+'+月低9'; rsn += '+月低9'
+                    elif in_week: tag = tag.replace('试探','持股')+'+周低9'; rsn += '+周低9'
+                    verdict = tag; reason = rsn
+                else:
+                    verdict = '观望'; reason = '来路不明+底结构→观望'
+                    if in_month: reason += '+月低9'
             elif chop_sustained_clear and bullish:
                 verdict = '试探'; reason = 'CHOP持续<38.2(≥3天)+方向偏多→试探'
                 if strong_bull: verdict = '持股'; reason += '+强共振上升'
@@ -491,6 +502,17 @@ def main():
                   for d, v in cyb_kc_res_raw.items()}
     print(f'创业板+科创50共振天数: {len(cyb_kc_res)}')
 
+    # v4.6.13: 提取沪深300/中证500 regime 供五指数投票明细
+    regime_300 = {}; regime_500 = {}
+    for name, indicators in indices_indicators.items():
+        if name == '沪深300':
+            for r in indicators:
+                if r: regime_300[r['date']] = r['regime']
+        elif name == '中证500':
+            for r in indicators:
+                if r: regime_500[r['date']] = r['regime']
+    print(f'沪深300 regime: {len(regime_300)}天, 中证500 regime: {len(regime_500)}天')
+
     # 加载序列
     seq_path = os.path.join(BASE, 'data/turn_sequence_events.csv')
     seq_sz = load_seq(seq_path, '深证成指')
@@ -520,6 +542,7 @@ def main():
             'date',
             'close_sz', 'close_sh', 'close_cyb', 'close_kc',
             'regime_sz', 'regime_sh', 'regime_cyb', 'regime_kc',
+            'regime_hs300', 'regime_zz500',
             'chop_sz', 'chop_sh', 'chop_cyb', 'chop_kc',
             'resonance', 'strong_bull', 'strong_bear',
             'cyb_kc_resonance',
@@ -617,6 +640,7 @@ def main():
                 d,
                 vf(row_sz, 'close'), vf(row_sh, 'close'), vf(row_cyb, 'close'), vf(row_kc, 'close'),
                 vf(row_sz, 'regime'), vf(row_sh, 'regime'), vf(row_cyb, 'regime'), vf(row_kc, 'regime'),
+                regime_300.get(d, ''), regime_500.get(d, ''),
                 vfs(row_sz, 'chop'), vfs(row_sh, 'chop'), vfs(row_cyb, 'chop'), vfs(row_kc, 'chop'),
                 res, sb, sbe, ckr,
                 vfi(row_sz, 'bs'), vfi(row_sz, 'ts'), vfi(row_sh, 'bs'), vfi(row_sh, 'ts'),

@@ -102,7 +102,7 @@ def find_article(analysis_date: str) -> dict | None:
                 continue
             # 周五的分析日→文章在周末发布（pub_date >= analysis_date 正常）
             dt = datetime.strptime(analysis_date, "%Y-%m-%d")
-            if dt.weekday() != 4 and pub_date >= analysis_date:
+            if dt.weekday() != 4 and pub_date > analysis_date:
                 continue
             if pub_date < expected:
                 continue  # 太旧，跳过（如上周的同名文章）
