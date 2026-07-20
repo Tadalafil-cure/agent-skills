@@ -37,7 +37,7 @@ def ensure_deps():
 # 确保 data_layer 在路径中
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fetch import fetch_all
+from fetch import fetch_all, fetch_all_minute
 from process import process_all
 
 OUT_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -58,6 +58,9 @@ def main():
     if not process_only:
         raw_path = str(OUT_DIR / "daily_raw.csv")
         fetch_all(raw_path)
+        print()
+        # 分钟线数据拉取（每次构建都刷新，120天回溯）
+        fetch_all_minute(str(OUT_DIR))
         print()
 
     if not fetch_only:
