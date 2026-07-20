@@ -23,7 +23,8 @@
 | 6 | 关键观察位汇总表 | 基于前五节提取 | — |
 | 7 | 总结（徐小明公众号风格） | — | 忘写纠错标准 |
 | 8 | 极简版（时期三零术语） | — | 与技术版混同 |
-| 9 | **博客对照（D→D+1 映射）** | blog_monitor.py | **最容易漏** |
+| 9 | **博客对照（D→D+1 映射）** 🔴 | blog_monitor.py | **最容易漏；A20时序：必须正文写完再跑** |
+| — | ⛔ **A20时序硬约束** 🔴 | — | **blog_monitor.py 在一~八节 write_file 之前调用 = A20违规。审查方式：正文出现"徐小明""博客""博文"即判违规，打回重写** |
 | 10 | **分钟线结构（嵌入每个指数的第四层）** | minute_structure_v2 | **最易误放附录** |
 | — | **盘中简报**（仅盘中触发时） | realtime.py | 盘中触发时勿忘 |
 
@@ -324,7 +325,7 @@ print(annual_structure_table())
 
 ---
 
-> 模板版本：v1.13 | 2026-07-18（四指数来路独立表格强制 + 跨指数同步误解澄清 + 市况定性闸门v1.13）\n> 配套技能：XuXiaoming-StockTradingStrategy v4.6.12
+> 模板版本：v1.14 | 2026-07-20（A20时序约束v1.14：blog_monitor.py必须在write_file正文完成后调用，先跑视为违规）\\n> 配套技能：XuXiaoming-StockTradingStrategy v4.6.23
 
 ---
 
@@ -381,13 +382,19 @@ print(annual_structure_table())
 
 ## 九、博客对照（独立追加 · 三层隔离架构）
 
-> **A20 三层隔离：①分析阶段所有Agent严禁接触博客。②主Agent统稿完成后，派独立子Agent读博客+LLM提取核心判断→返回结构化摘要。③主Agent拿子Agent返回的摘要做追加+比对，主Agent本身不读博客原文。**
+> **A20 三层隔离——时序约束（v1.14 🔴）：**
+> ①分析阶段所有Agent严禁接触博客——blog_monitor.py 必须在 write_file 前八节完成之后才能调用。
+> ②主Agent统稿完成（一~八节已写盘），**然后**派独立子Agent读博客+LLM提取核心判断→返回结构化摘要。
+> ③主Agent拿子Agent返回的摘要做追加+比对——主Agent本身不读博客原文。
+>
+> ⛔ **A20 时序违规识别**：如果 blog_monitor.py 的调用顺序在 write_file（报告正文）之前，或者报告一~八节出现「徐小明」「博客」「博文」字样，即为 A20 违规——必须重新生成。
 >
 > 执行流程：
-> 1. 独立子Agent执行 `python scripts/blog_monitor.py --date YYYY-MM-DD`，获取全文
-> 2. 子Agent用 LLM 理解全文，提取：①核心判断（看多/看空/观望）②关键依据（≤2句）③关键点位（如有）
-> 3. 子Agent返回结构化摘要给主Agent
-> 4. 主Agent比对模型裁决 vs 博客摘要，追加到报告末尾
+> 1. 主Agent写完一~八节（write_file 落盘）
+> 2. **然后**独立子Agent执行 `python scripts/blog_monitor.py --date YYYY-MM-DD`，获取全文
+> 3. 子Agent用 LLM 理解全文，提取：①核心判断（看多/看空/观望）②关键依据（≤2句）③关键点位（如有）
+> 4. 子Agent返回结构化摘要给主Agent
+> 5. 主Agent比对模型裁决 vs 博客摘要，追加到报告末尾（patch 追加，不重写全文）
 
 比对输出格式：
 
