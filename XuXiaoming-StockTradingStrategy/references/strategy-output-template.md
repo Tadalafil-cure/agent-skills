@@ -324,7 +324,7 @@ print(annual_structure_table())
 
 ---
 
-> 模板版本：v1.12 | 2026-07-16（四指数来路独立表格强制 + 跨指数同步误解澄清）\n> 配套技能：XuXiaoming-StockTradingStrategy v4.6.12
+> 模板版本：v1.13 | 2026-07-18（四指数来路独立表格强制 + 跨指数同步误解澄清 + 市况定性闸门v1.13）\n> 配套技能：XuXiaoming-StockTradingStrategy v4.6.12
 
 ---
 
