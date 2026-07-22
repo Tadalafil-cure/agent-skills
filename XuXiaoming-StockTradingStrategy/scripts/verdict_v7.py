@@ -337,6 +337,7 @@ def verdict_single(indicators, rows, resonance, seq_data):
             osc_streak = 0
             if in_oscillation:
                 exit_streak += 1
+                # 来路不明→退震≥4d（最保守，与下行同）
                 threshold = 3 if osc_origin_confirmed == '上行' else 4
                 if exit_streak >= threshold:
                     in_oscillation = False
