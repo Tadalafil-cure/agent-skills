@@ -209,22 +209,12 @@ def compute_cyb_kc_resonance(indicators_cyb, indicators_kc):
 # 4. 单指数裁决
 # ============================================================
 def chop_level(c):
-    """CHOP 三级分档（非对称滞回设计）
+    """CHOP 三级分档（v4.6.24 修正：仅描述趋势可信度，不参与状态切换）
     
-    CHOP > 61.8 (chaotic): 单日即切→震荡。
-        回测依据(2021-2026, 科创50 1329天):
-        - 18个>61.8簇，36.7%为单日尖刺
-        - 滞回(N=2/N=3)拖后腿: 延迟18天多亏+16.10%
-        - 即时切换 Sharpe=0.31 vs 滞回=0.22
-        - 原因: 上穿61.8是真正的恐慌/分歧爆发, 即使次日回落当天也真跌
-        
-    CHOP < 38.2 (clear): ≥3天持续确认才有效。
-        回测依据(同数据源):
-        - 94%单日跌破38.2为假收敛(触及即弹回)
-        - ≥3天持续<38.2: 10次信号 20日胜率70% +2.1%
-        - ≥1天: 胜率仅58% +1.1%, 噪声主导
-        
-    两条线的不对称不是bug——上穿是真信号多假信号少, 下穿是假信号多真信号少。
+    CHOP 角色：趋势可信度计。chaotic≠策略翻牌——状态切换由三合一 regime + 滞回统一判定。
+    < 38.2: clear（趋势清晰，可信）
+    38-62: fuzzy（趋势模糊，方向不确定）
+    > 61.8: chaotic（极端混乱，仅标注风险）
     """
     if c is None: return 'unknown'
     if c < 38.2: return 'clear'
@@ -232,13 +222,7 @@ def chop_level(c):
     return 'chaotic'
 
 def is_trending(regime, cl):
-    """趋势判定: CHOP>61.8(chaotic)→直接否趋势, 无滞回, 单日即切。
-    
-    这与 CHOP<38.2 的 ≥3天滞回形成非对称设计:
-    - 上穿61.8: 即时切换 (真信号多, 滞回代价大)
-    - 下穿38.2: ≥3天确认 (假信号多, 需持续验证)
-    """
-    if cl == 'chaotic': return False
+    """趋势判定：仅由三合一 regime 决定。CHOP 不否趋势。"""
     if regime in ('上行趋势', '偏多', '下行趋势', '偏空'): return True
     return False
 
@@ -272,6 +256,12 @@ def verdict_single(indicators, rows, resonance, seq_data):
     n = len(indicators)
     results = [None] * n
     res_map = {d: r['resonance'] for d, r in resonance.items()}
+
+    # 震荡滞回状态（v4.6.24: 入震≥2d, 退震上行≥3d, 退震下行≥4d）
+    osc_streak = 0           # 连续震荡天数
+    exit_streak = 0          # 连续非震荡天数
+    in_oscillation = False   # 滞回确认正在震荡中
+    osc_origin_confirmed = None  # 确认后的震荡来路
 
     # === 震荡来路检测（v4.6.1新增）===
     def detect_oscillation_origin(idx):
@@ -320,7 +310,7 @@ def verdict_single(indicators, rows, resonance, seq_data):
                 if seg_dir is not None:
                     break  # 趋势段结束
 
-        if seg_dir and seg_days >= 7:
+        if seg_dir and seg_days >= 5:
             return seg_dir
         return None
 
@@ -333,6 +323,36 @@ def verdict_single(indicators, rows, resonance, seq_data):
         cl = chop_level(c); regime = r['regime']
         trending = is_trending(regime, cl)
         bullish = r['bullish']
+
+        # 入震/退震滞回追踪（v4.6.24: 入震≥2d, 退震上行≥3d, 退震下行≥4d）
+        if regime == '震荡':
+            osc_streak += 1
+            exit_streak = 0
+            if osc_streak >= 2 and not in_oscillation:
+                in_oscillation = True
+                # v4.6.25: 只在首次入震时检测来路，再入震沿用已有 origin
+                if osc_origin_confirmed is None:
+                    osc_origin_confirmed = detect_oscillation_origin(i)
+        else:
+            osc_streak = 0
+            if in_oscillation:
+                exit_streak += 1
+                threshold = 3 if osc_origin_confirmed == '上行' else 4
+                if exit_streak >= threshold:
+                    in_oscillation = False
+                    # v4.6.25: 不清空 osc_origin——退震可能是假退震(34%)，
+                    # 再入震时应沿用原始来路，不重新检测
+                    exit_streak = 0
+
+        # 退震未确认期间：三合一 regime 降级（v4.6.24）
+        # 数据回测：假退震率34%，退震期间的三合一判定过于乐观
+        # 下行趋势→偏空，上行趋势→偏多，确认后恢复
+        regime_effective = regime
+        if in_oscillation and regime != '震荡':
+            if regime == '下行趋势':
+                regime_effective = '偏空'
+            elif regime == '上行趋势':
+                regime_effective = '偏多'
 
         bs_today = r['bs']; ts_today = r['ts']
         bs_recent = any(rows[j].get('bottom_structure', 0) for j in range(max(0,i-3), i+1))
@@ -387,13 +407,22 @@ def verdict_single(indicators, rows, resonance, seq_data):
         strong_bull = res == '强共振_上升'
         strong_bear = res == '强共振_下跌'
 
-        # === 震荡来路判断 ===
-        osc_origin = detect_oscillation_origin(i) if not trending else None
+        # === 震荡来路判断（滞回确认后） ===
+        osc_origin = osc_origin_confirmed if in_oscillation else None
 
-        # ============ 裁决 ============
+        # ============ 裁决（v4.6.24 滞回三层分支） ============
         verdict = '观望'; reason = ''
 
-        if trending:
+        # 【分支一】入震未确认过渡期（regime=震荡但 osc_streak=1）→ 保持惯性
+        if regime == '震荡' and osc_streak == 1 and not in_oscillation:
+            prev = results[i-1] if i > 0 and results[i-1] else None
+            if prev:
+                verdict = prev['verdict']
+                reason = prev['reason'] + ' | 入震待确认(≥2d)'
+            # 无前日结果 → 保持默认观望
+
+        # 【分支二】纯趋势（不在震荡周期中，含退震确认后）
+        elif trending and not in_oscillation:
             if bullish:
                 verdict = '持股'; reason = '趋势向上'
                 if (ts_today or ts_recent) and ts_count >= 2:
@@ -405,7 +434,7 @@ def verdict_single(indicators, rows, resonance, seq_data):
                 # v4.6.2: CHOP > 55 趋势可信度告警——距61.8切换线越近风险越高
                 if verdict == '持股' and c is not None and c > 55:
                     gap = 61.8 - c
-                    reason += f' | ⚠️CHOP={c:.0f}(距61.8切换线仅{gap:.1f}点)'
+                    reason += f' | ⚠️CHOP={c:.0f}(预警:距混乱仅{gap:.1f}点)'
             else:
                 verdict = '空仓'; reason = '趋势向下'
                 if (bs_today and bs_ok) or (bs_recent and bs_ok):
@@ -420,51 +449,61 @@ def verdict_single(indicators, rows, resonance, seq_data):
                 verdict = '试探'; reason = '强共振上升+单指数偏空→试探'
             if strong_bear and bullish:
                 verdict = '持股(警戒)'; reason = '强共振下跌+单指数偏多→警戒'
-        else:
-            # 震荡市（v4.6.1 震荡框架）
-            # 规则优先级: BS+filter(下行来路) > CHOP收敛 > 序列信号 > 来路默认
-            # v4.6.13: 上行来路震荡中底结构不独立触发操作——仅关注，等出口方向或趋势突破
-            #   - 上行来路: 顶结构已减仓，底结构是反弹不是反转，不抄底
-            #   - 下行来路: 空仓等入场，底结构是唯一标准，BS筛选通过→试探
-            #   - 来路不明: 保守处理，不触发
-            if (bs_today and bs_ok) or (bs_recent and bs_ok):
-                if osc_origin == '上行':
-                    verdict = '观望'; reason = '来路上行+底结构→关注(不触发)'
-                    if in_month: reason += '+月低9'
-                    if day_seq == '低9': verdict = '观望(偏多)'; reason += '+低9'
-                elif osc_origin == '下行':
-                    tag, rsn = bs_pattern(c, chop_hist)
-                    if in_month: tag = tag.replace('试探','持股')+'+月低9'; rsn += '+月低9'
-                    elif in_week: tag = tag.replace('试探','持股')+'+周低9'; rsn += '+周低9'
-                    verdict = tag; reason = rsn
+
+        # 【分支三】震荡逻辑（滞回确认在震中，含退震未确认期间）
+        elif in_oscillation:
+            # 退震未确认：regime已变但退震天数不足阈值 → 跟随regime方向但降强度
+            if regime != '震荡':
+                if bullish:
+                    verdict = '观望(偏多)'; reason = '退震待确认+偏多'
                 else:
-                    verdict = '观望'; reason = '来路不明+底结构→观望'
-                    if in_month: reason += '+月低9'
-            elif chop_sustained_clear and bullish:
-                verdict = '试探'; reason = 'CHOP持续<38.2(≥3天)+方向偏多→试探'
-                if strong_bull: verdict = '持股'; reason += '+强共振上升'
-            elif day_seq == '高9':
-                verdict = '观望(偏空)'; reason = '震荡+高9'
-            elif day_seq == '低9':
-                verdict = '观望(偏多)'; reason = '震荡+低9'
+                    verdict = '空仓(关注)'; reason = '退震待确认+偏空'
+                    if day_seq == '低9':
+                        reason += '+低9'
+                if c is not None and c < 38.2:
+                    reason += f' | CHOP={c:.0f}<38.2'
             else:
-                # v4.6.1: 震荡来路判断（H17）
-                # v4.6.2: CHOP>61.8 硬切换明确标注——不是"趋势降级"是策略翻牌
-                if osc_origin == '上行':
-                    verdict = '观望(偏多)'; reason = '震荡，来路上行→偏多'
-                elif osc_origin == '下行':
-                    verdict = '观望'; reason = '震荡，来路下行→观望'
+                # 震荡市（v4.6.1 震荡框架，v4.6.24 加滞回）
+                # 规则优先级: BS+filter(下行来路) > CHOP收敛 > 序列信号 > 来路默认
+                if (bs_today and bs_ok) or (bs_recent and bs_ok):
+                    if osc_origin == '上行':
+                        verdict = '观望'; reason = '来路上行+底结构→关注(不触发)'
+                        if in_month: reason += '+月低9'
+                        if day_seq == '低9': verdict = '观望(偏多)'; reason += '+低9'
+                    elif osc_origin == '下行':
+                        tag, rsn = bs_pattern(c, chop_hist)
+                        if in_month: tag = tag.replace('试探','持股')+'+月低9'; rsn += '+月低9'
+                        elif in_week: tag = tag.replace('试探','持股')+'+周低9'; rsn += '+周低9'
+                        verdict = tag; reason = rsn
+                    else:
+                        verdict = '观望'; reason = '来路不明+底结构→观望'
+                        if in_month: reason += '+月低9'
+                elif chop_sustained_clear and bullish:
+                    verdict = '试探'; reason = 'CHOP持续<38.2(≥3天)+方向偏多→试探'
+                    if strong_bull: verdict = '持股'; reason += '+强共振上升'
+                elif day_seq == '高9':
+                    verdict = '观望(偏空)'; reason = '震荡+高9'
+                elif day_seq == '低9':
+                    verdict = '观望(偏多)'; reason = '震荡+低9'
                 else:
-                    verdict = '观望'; reason = '震荡'
-                # CHOP原因标注
-                if c is not None and c > 61.8:
-                    reason += f' | CHOP={c:.0f}>61.8硬切换(趋势→震荡)'
-                # CHOP<38.2 单日关注（不触发操作，仅标注）
-                elif chop_below_38 and not chop_sustained_clear:
-                    reason += ' | CHOP<38.2关注'
+                    # v4.6.1: 震荡来路判断（H17）
+                    if osc_origin == '上行':
+                        verdict = '观望(偏多)'; reason = '震荡，来路上行→偏多'
+                    elif osc_origin == '下行':
+                        verdict = '观望'; reason = '震荡，来路下行→观望'
+                    else:
+                        verdict = '观望'; reason = '震荡'
+                    # CHOP原因标注
+                    if c is not None and c > 61.8:
+                        reason += f' | ⚠️CHOP={c:.0f}>61.8(极端混乱)'
+                    elif chop_below_38 and not chop_sustained_clear:
+                        reason += ' | CHOP<38.2关注'
+
+        # 残差（regime≠震荡, trending=False, 不在震中）→ 观望
+        # else: pass (verdict stays '观望')
 
         results[i] = {
-            'date': d, 'close': r['close'], 'regime': regime,
+            'date': d, 'close': r['close'], 'regime': regime_effective,
             'chop': c, 'chop_level': cl, 'trending': trending,
             'bs': bs_today, 'ts': ts_today, 'bd': r.get('bd', 0), 'bs_ok': bs_ok,
             'day_seq': day_seq or '', 'month_win': in_month, 'week_win': in_week,
@@ -551,7 +590,7 @@ def main():
             'bs_ok_sz', 'bs_ok_sh', 'bs_ok_cyb', 'bs_ok_kc',
             'day_seq_sz', 'day_seq_sh', 'day_seq_cyb', 'day_seq_kc',
             'month_win', 'week_win',
-            'osc_origin_sz', 'osc_origin_sh',
+            'osc_origin_sz', 'osc_origin_sh', 'osc_origin_cyb', 'osc_origin_kc',
             'verdict_sz', 'verdict_sh', 'verdict_cyb', 'verdict_kc',
             'reason_sz', 'reason_sh', 'reason_cyb', 'reason_kc',
             'verdict_main', 'verdict_tech', 'reason'
@@ -635,6 +674,7 @@ def main():
             rsn = f"主板:五指数{res}({bulls5}多{bears5}空) 科技:{rsn_tech}"
 
             oo_sz = vf(row_sz, 'osc_origin'); oo_sh = vf(row_sh, 'osc_origin')
+            oo_cyb = vf(row_cyb, 'osc_origin'); oo_kc = vf(row_kc, 'osc_origin')
 
             w.writerow([
                 d,
@@ -649,7 +689,7 @@ def main():
                 vfi(row_sz, 'bs_ok'), vfi(row_sh, 'bs_ok'), vfi(row_cyb, 'bs_ok'), vfi(row_kc, 'bs_ok'),
                 vf(row_sz, 'day_seq'), vf(row_sh, 'day_seq'), vf(row_cyb, 'day_seq'), vf(row_kc, 'day_seq'),
                 mw, ww,
-                oo_sz, oo_sh,
+                oo_sz, oo_sh, oo_cyb, oo_kc,
                 v_sz, v_sh, v_cyb, v_kc,
                 vf(row_sz, 'reason'), vf(row_sh, 'reason'), vf(row_cyb, 'reason'), vf(row_kc, 'reason'),
                 v_main, v_tech, rsn,
